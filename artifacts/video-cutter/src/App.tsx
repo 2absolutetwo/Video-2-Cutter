@@ -18,6 +18,7 @@ import {
   FileVideo,
   Sparkles,
   RefreshCw,
+  ArrowRight,
 } from "lucide-react";
 
 const FFMPEG_BASE_URL =
@@ -364,7 +365,7 @@ function VideoCutter() {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100">
-      <div className="mx-auto max-w-5xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-6 py-12">
         {/* Header */}
         <div className="mb-10 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-medium text-indigo-300">
@@ -393,10 +394,10 @@ function VideoCutter() {
           )}
         </div>
 
-        {/* Diagram-style layout: uploads | auto-cut | clips */}
-        <div className="grid items-center gap-6 md:grid-cols-[1fr_auto_1fr]">
-          {/* Left column: stacked uploads */}
-          <div className="flex flex-col gap-5">
+        {/* Diagram-style flow: uploads → AUTO CUT → clips → merged */}
+        <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1.1fr)]">
+          {/* 1. Stacked uploads */}
+          <div className="flex flex-col justify-center gap-5">
             <UploadCard
               kind="audio"
               file={audioFile}
@@ -413,13 +414,15 @@ function VideoCutter() {
             />
           </div>
 
-          {/* Middle column: AUTO CUT button */}
+          <FlowArrow />
+
+          {/* 2. AUTO CUT */}
           <div className="flex flex-col items-center justify-center gap-3">
             <button
               onClick={handleCut}
               disabled={!canCut}
               data-testid="button-cut"
-              className="rounded-md border-2 border-cyan-400 bg-cyan-500/5 px-8 py-4 text-base font-semibold tracking-wide text-cyan-200 transition hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-40"
+              className="group relative w-full rounded-lg border-2 border-cyan-400 bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 px-6 py-5 text-base font-semibold tracking-widest text-cyan-200 shadow-[0_0_30px_-10px_rgba(34,211,238,0.6)] transition hover:from-cyan-400/20 hover:to-cyan-500/10 hover:shadow-[0_0_40px_-8px_rgba(34,211,238,0.8)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
             >
               {isWorking ? (
                 <span className="inline-flex items-center">
@@ -433,6 +436,11 @@ function VideoCutter() {
                 </span>
               )}
             </button>
+            {cutTime !== null && cutTime > 0 && (
+              <div className="rounded-md border border-cyan-500/30 bg-cyan-500/5 px-2.5 py-1 font-mono text-[11px] text-cyan-300">
+                trim −{formatSeconds(cutTime)}
+              </div>
+            )}
             {(audioFile || videoFile || outputUrl) && !isWorking && (
               <Button
                 size="sm"
@@ -447,8 +455,10 @@ function VideoCutter() {
             )}
           </div>
 
-          {/* Right column: stacked clip boxes */}
-          <div className="flex flex-col gap-5">
+          <FlowArrow />
+
+          {/* 3. Stacked clip boxes */}
+          <div className="flex flex-col justify-center gap-5">
             <ClipBox
               label="CLIP 1"
               testId="video-main"
@@ -470,9 +480,64 @@ function VideoCutter() {
               downloadName={outputName}
             />
           </div>
+
+          <FlowArrow />
+
+          {/* 4. Merged Video */}
+          <div className="flex flex-col justify-center">
+            <div className="rounded-lg border-2 border-slate-200/70 bg-slate-900/40 p-3 shadow-[0_0_30px_-15px_rgba(148,163,184,0.6)]">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-sm font-semibold tracking-wide text-slate-100">
+                  Merged Video
+                </div>
+                <Sparkles className="h-3.5 w-3.5 text-purple-300" />
+              </div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-400">
+                Clip 1 + Clip 2
+              </div>
+              <div className="mt-3 overflow-hidden rounded border border-slate-800 bg-black">
+                {mergedUrl ? (
+                  <video
+                    src={mergedUrl}
+                    controls
+                    className="h-auto w-full"
+                    data-testid="video-merged"
+                  />
+                ) : (
+                  <div className="flex aspect-video w-full items-center justify-center text-xs text-slate-600">
+                    Result appears after Auto Cut
+                  </div>
+                )}
+              </div>
+              {mergedUrl && (
+                <>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
+                    <span className="truncate text-slate-300">{mergedName}</span>
+                    <span className="text-slate-600">·</span>
+                    <span>{formatBytes(mergedSize)}</span>
+                    <span className="text-slate-600">·</span>
+                    <span>{formatSeconds(mergedDuration)}</span>
+                  </div>
+                  <a
+                    href={mergedUrl}
+                    download={mergedName}
+                    className="mt-3 inline-block w-full"
+                  >
+                    <Button
+                      className="w-full bg-purple-500 text-white hover:bg-purple-400"
+                      data-testid="button-download-merged"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download
+                    </Button>
+                  </a>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Progress + error (kept under main grid) */}
+        {/* Progress + error */}
         {(isWorking || errorMsg) && (
           <Card className="mt-6 border-slate-800 bg-slate-900/60 backdrop-blur">
             <CardContent className="p-6">
@@ -498,57 +563,22 @@ function VideoCutter() {
           </Card>
         )}
 
-        {/* Merged video — wide rectangle below */}
-        <div className="mt-8 rounded-lg border-2 border-indigo-400/70 bg-slate-900/40 p-5">
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-            <Sparkles className="h-4 w-4 text-purple-300" />
-            Merged Video — Clip 1 + Clip 2
-          </div>
-          <div className="mt-4 overflow-hidden rounded-md border border-slate-800 bg-black">
-            {mergedUrl ? (
-              <video
-                src={mergedUrl}
-                controls
-                className="h-auto w-full"
-                data-testid="video-merged"
-              />
-            ) : (
-              <div className="flex aspect-video w-full items-center justify-center text-xs text-slate-600">
-                Merged result will appear here after Auto Cut
-              </div>
-            )}
-          </div>
-          {mergedUrl && (
-            <>
-              <div className="mt-3 flex flex-wrap items-center gap-x-2 text-sm text-slate-400">
-                <span className="text-slate-200">{mergedName}</span>
-                <span className="text-slate-600">·</span>
-                <span>{formatBytes(mergedSize)}</span>
-                <span className="text-slate-600">·</span>
-                <span>{formatSeconds(mergedDuration)}</span>
-              </div>
-              <a
-                href={mergedUrl}
-                download={mergedName}
-                className="mt-3 inline-block"
-              >
-                <Button
-                  className="bg-purple-500 text-white hover:bg-purple-400"
-                  data-testid="button-download-merged"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Merged
-                </Button>
-              </a>
-            </>
-          )}
-        </div>
-
         {/* Footer */}
         <div className="mt-12 text-center text-xs text-slate-500">
           Files never leave your device. Processing happens entirely in your
           browser.
         </div>
+      </div>
+    </div>
+  );
+}
+
+function FlowArrow() {
+  return (
+    <div className="hidden items-center justify-center lg:flex">
+      <div className="relative flex items-center">
+        <div className="h-px w-8 bg-gradient-to-r from-slate-700 to-slate-500" />
+        <ArrowRight className="-ml-1 h-5 w-5 text-slate-400" />
       </div>
     </div>
   );
