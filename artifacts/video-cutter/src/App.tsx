@@ -487,7 +487,7 @@ function MediaPool({
           setDragOver(false);
           if (e.dataTransfer.files?.length) handleAdd(e.dataTransfer.files);
         }}
-        className={`rounded-xl border-2 border-dashed p-3 transition ${
+        className={`max-h-[220px] overflow-y-auto rounded-xl border-2 border-dashed p-3 transition ${
           dragOver
             ? "border-indigo-400 bg-indigo-50/60"
             : "border-slate-200 bg-slate-50/40"
