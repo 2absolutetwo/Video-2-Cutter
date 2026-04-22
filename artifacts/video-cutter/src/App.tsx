@@ -565,6 +565,30 @@ function VideoCutterApp() {
           </div>
         </div>
 
+        {/* Media Pools - separate audio + video */}
+        <div className="mb-6 grid gap-4 md:grid-cols-2">
+          <MediaPool
+            kind="audio"
+            items={pool.filter((p) => p.kind === "audio")}
+            onAdd={addPoolFiles}
+            onRemove={removePoolItem}
+            onClear={() =>
+              setPool((p) => p.filter((x) => x.kind !== "audio"))
+            }
+            onLoad={() => loadPoolToCards("audio")}
+          />
+          <MediaPool
+            kind="video"
+            items={pool.filter((p) => p.kind === "video")}
+            onAdd={addPoolFiles}
+            onRemove={removePoolItem}
+            onClear={() =>
+              setPool((p) => p.filter((x) => x.kind !== "video"))
+            }
+            onLoad={() => loadPoolToCards("video")}
+          />
+        </div>
+
         {/* Info card - pool & action summary */}
         <div className="mb-6 rounded-2xl border-2 border-slate-200 bg-white px-3 py-2 shadow-sm">
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -657,30 +681,6 @@ function VideoCutterApp() {
               </span>
             </div>
           </div>
-        </div>
-
-        {/* Media Pools - separate audio + video */}
-        <div className="mb-6 grid gap-4 md:grid-cols-2">
-          <MediaPool
-            kind="audio"
-            items={pool.filter((p) => p.kind === "audio")}
-            onAdd={addPoolFiles}
-            onRemove={removePoolItem}
-            onClear={() =>
-              setPool((p) => p.filter((x) => x.kind !== "audio"))
-            }
-            onLoad={() => loadPoolToCards("audio")}
-          />
-          <MediaPool
-            kind="video"
-            items={pool.filter((p) => p.kind === "video")}
-            onAdd={addPoolFiles}
-            onRemove={removePoolItem}
-            onClear={() =>
-              setPool((p) => p.filter((x) => x.kind !== "video"))
-            }
-            onLoad={() => loadPoolToCards("video")}
-          />
         </div>
 
         {/* 2-column grid of cards */}
