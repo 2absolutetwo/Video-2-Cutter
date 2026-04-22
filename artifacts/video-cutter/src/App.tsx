@@ -36,24 +36,70 @@ function formatBytes(bytes: number): string {
 
 function getMediaDuration(file: File, kind: "audio" | "video"): Promise<number> {
   return new Promise((resolve, reject) => {
-    const el = document.createElement(kind);
+    const el = document.createElement(kind) as HTMLMediaElement;
     el.preload = "metadata";
-    el.muted = true;
+    (el as HTMLVideoElement).muted = true;
     const url = URL.createObjectURL(file);
-    el.src = url;
-    el.onloadedmetadata = () => {
-      const d = el.duration;
+    let settled = false;
+    const cleanup = () => {
       URL.revokeObjectURL(url);
+      el.src = "";
+      el.removeAttribute("src");
+      try {
+        el.load();
+      } catch {}
+    };
+    const finish = (d: number) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
       if (!isFinite(d) || d <= 0) {
         reject(new Error(`Could not read duration of ${kind} file`));
       } else {
         resolve(d);
       }
     };
+
+    el.onloadedmetadata = () => {
+      const d = el.duration;
+      if (isFinite(d) && d > 0) {
+        finish(d);
+        return;
+      }
+      // Workaround for browsers reporting Infinity (e.g. some webm/mp4 files).
+      // Seek to a very large time to force the browser to compute the real duration.
+      const onTimeUpdate = () => {
+        el.ontimeupdate = null;
+        const real = el.duration;
+        try {
+          el.currentTime = 0;
+        } catch {}
+        finish(real);
+      };
+      el.ontimeupdate = onTimeUpdate;
+      try {
+        el.currentTime = 1e9;
+      } catch {
+        finish(NaN);
+      }
+    };
     el.onerror = () => {
-      URL.revokeObjectURL(url);
+      if (settled) return;
+      settled = true;
+      cleanup();
       reject(new Error(`Failed to load ${kind} file`));
     };
+
+    // Safety timeout so we don't hang forever
+    setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        cleanup();
+        reject(new Error(`Timed out reading duration of ${kind} file`));
+      }
+    }, 15000);
+
+    el.src = url;
   });
 }
 
