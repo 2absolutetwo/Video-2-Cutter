@@ -1093,7 +1093,11 @@ function UploadBox({
       />
       <div className="flex items-center gap-2.5">
         <div
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${palette.iconBg} text-white shadow-md ${palette.iconShadow}`}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-md transition-all duration-200 ${
+            hasFile
+              ? `${palette.iconBg} text-white ${palette.iconShadow}`
+              : `bg-white text-white ring-1 ${isAudio ? "ring-emerald-200" : "ring-rose-200"}`
+          }`}
         >
           <Icon className="h-4 w-4" strokeWidth={2.25} />
         </div>
