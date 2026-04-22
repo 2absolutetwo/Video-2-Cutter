@@ -29,6 +29,7 @@ import {
   FolderOpen,
   GripVertical,
   Upload,
+  AlertTriangle,
 } from "lucide-react";
 
 type PoolItem = {
@@ -727,17 +728,20 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
 
     const isWorking = stage === "reading" || stage === "cutting";
 
+    const videoTooLong =
+      audioDuration !== null &&
+      videoDuration !== null &&
+      videoDuration > audioDuration;
+
     const canCut =
       engineReady &&
       !!ffmpeg &&
       !!audioFile &&
       !!videoFile &&
       cutTime !== null &&
-      cutTime !== 0 &&
+      cutTime > 0 &&
       videoDuration !== null &&
-      audioDuration !== null &&
-      audioDuration > 0 &&
-      Math.abs(cutTime) < videoDuration &&
+      cutTime < videoDuration &&
       !isWorking;
 
     useEffect(() => {
@@ -763,7 +767,7 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
     };
 
     const runCut = async () => {
-      if (!ffmpeg || !audioFile || !videoFile || cutTime === null) return;
+      if (!ffmpeg || !audioFile || !videoFile || cutTime === null || cutTime <= 0) return;
 
       setErrorMsg("");
       setProgress(0);
@@ -791,71 +795,55 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
         const data = await fetchFile(videoFile);
         await ffmpeg.writeFile(inputName, data);
 
-        const mimeType = outputExt === "webm" ? "video/webm" : "video/mp4";
+        const startSec = (videoDuration as number) - cutTime;
+
         setStage("cutting");
+        await ffmpeg.exec([
+          "-ss",
+          startSec.toFixed(3),
+          "-i",
+          inputName,
+          "-c",
+          "copy",
+          "-an",
+          "-avoid_negative_ts",
+          "make_zero",
+          outFile,
+        ]);
 
-        if (cutTime > 0) {
-          // Audio longer than video: extend video by repeating its tail
-          const startSec = (videoDuration as number) - cutTime;
+        const out = await ffmpeg.readFile(outFile);
+        const outBuf = out as Uint8Array;
+        const mimeType = outputExt === "webm" ? "video/webm" : "video/mp4";
+        const blob = new Blob([outBuf.slice().buffer], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        setOutputUrl(url);
 
-          await ffmpeg.exec([
-            "-ss",
-            startSec.toFixed(3),
-            "-i",
-            inputName,
-            "-c",
-            "copy",
-            "-an",
-            "-avoid_negative_ts",
-            "make_zero",
-            outFile,
-          ]);
+        await ffmpeg.exec([
+          "-i",
+          inputName,
+          "-c",
+          "copy",
+          "-an",
+          clip1NoAudio,
+        ]);
 
-          const out = await ffmpeg.readFile(outFile);
-          const outBuf = out as Uint8Array;
-          const blob = new Blob([outBuf.slice().buffer], { type: mimeType });
-          const url = URL.createObjectURL(blob);
-          setOutputUrl(url);
+        const concatList = `file '${clip1NoAudio}'\nfile '${outFile}'\n`;
+        await ffmpeg.writeFile(
+          concatFile,
+          new TextEncoder().encode(concatList),
+        );
 
-          await ffmpeg.exec([
-            "-i",
-            inputName,
-            "-c",
-            "copy",
-            "-an",
-            clip1NoAudio,
-          ]);
-
-          const concatList = `file '${clip1NoAudio}'\nfile '${outFile}'\n`;
-          await ffmpeg.writeFile(
-            concatFile,
-            new TextEncoder().encode(concatList),
-          );
-
-          await ffmpeg.exec([
-            "-f",
-            "concat",
-            "-safe",
-            "0",
-            "-i",
-            concatFile,
-            "-c",
-            "copy",
-            mergedFile,
-          ]);
-        } else {
-          // Audio shorter than video: trim video to match audio duration
-          await ffmpeg.exec([
-            "-i",
-            inputName,
-            "-t",
-            (audioDuration as number).toFixed(3),
-            "-c",
-            "copy",
-            "-an",
-            mergedFile,
-          ]);
-        }
+        await ffmpeg.exec([
+          "-f",
+          "concat",
+          "-safe",
+          "0",
+          "-i",
+          concatFile,
+          "-c",
+          "copy",
+          mergedFile,
+        ]);
 
         const mergedData = await ffmpeg.readFile(mergedFile);
         const mergedBuf = mergedData as Uint8Array;
@@ -866,19 +854,17 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
         setMergedUrl(mUrl);
         setMergedName(mergedFileName);
         setMergedSize(mergedBlob.size);
-        setMergedDuration(audioDuration as number);
+        setMergedDuration((videoDuration as number) + cutTime);
 
         setStage("done");
         setProgress(100);
 
         try {
           await ffmpeg.deleteFile(inputName);
-          if (cutTime > 0) {
-            await ffmpeg.deleteFile(outFile);
-            await ffmpeg.deleteFile(clip1NoAudio);
-            await ffmpeg.deleteFile(concatFile);
-          }
+          await ffmpeg.deleteFile(outFile);
+          await ffmpeg.deleteFile(clip1NoAudio);
           await ffmpeg.deleteFile(mergedFile);
+          await ffmpeg.deleteFile(concatFile);
         } catch {
           /* ignore */
         }
@@ -904,14 +890,43 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
       },
     }));
 
+    const videoSwapRef = useRef<HTMLInputElement | null>(null);
+    const [swapChecked, setSwapChecked] = useState(false);
+
+    useEffect(() => {
+      if (!videoTooLong) setSwapChecked(false);
+    }, [videoTooLong]);
+
+    const handleSwapToggle = (checked: boolean) => {
+      setSwapChecked(checked);
+      if (checked) videoSwapRef.current?.click();
+    };
+
     return (
       <div
         className={`rounded-2xl border-2 bg-white p-4 shadow-sm transition-colors ${
-          highlight
+          videoTooLong
+            ? "border-rose-500 shadow-md shadow-rose-200/50 bg-rose-50/40"
+            : highlight
             ? "border-cyan-500 shadow-md"
             : "border-slate-300"
         }`}
       >
+        <input
+          ref={videoSwapRef}
+          type="file"
+          accept="video/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0] ?? null;
+            if (f) {
+              void handleVideo(f);
+              setSwapChecked(false);
+            }
+            if (e.target) e.target.value = "";
+          }}
+          data-testid={`input-video-swap-${index}`}
+        />
         <div className="flex items-stretch gap-3">
           {/* Number circle */}
           <div className="flex shrink-0 items-center justify-center">
@@ -987,8 +1002,29 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
         </div>
 
         {/* Status row */}
-        {(isWorking || errorMsg || (cutTime !== null && cutTime > 0) || mergedUrl) && (
+        {(isWorking || errorMsg || videoTooLong || (cutTime !== null && cutTime > 0) || mergedUrl) && (
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+            {videoTooLong && !mergedUrl && (
+              <>
+                <span className="inline-flex items-center gap-1.5 rounded border border-rose-400 bg-rose-100 px-2 py-0.5 font-semibold text-rose-700">
+                  <AlertTriangle className="h-3 w-3" />
+                  Video longer than audio (+{formatSeconds(Math.abs(cutTime ?? 0))}) — change video
+                </span>
+                <label
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-rose-300 bg-white px-2 py-0.5 text-rose-700 hover:bg-rose-50"
+                  data-testid={`label-swap-video-${index}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={swapChecked}
+                    onChange={(e) => handleSwapToggle(e.target.checked)}
+                    className="h-3 w-3 accent-rose-600"
+                    data-testid={`checkbox-swap-video-${index}`}
+                  />
+                  <span className="font-semibold">change video</span>
+                </label>
+              </>
+            )}
             {cutTime !== null && cutTime > 0 && !mergedUrl && (
               <span className="rounded border border-cyan-300 bg-cyan-50 px-2 py-0.5 font-mono text-cyan-700">
                 trim −{formatSeconds(cutTime)}
