@@ -358,7 +358,7 @@ function VideoCutterApp() {
     <div className="min-h-screen w-full bg-slate-50 text-slate-900">
       <div className="mx-auto max-w-6xl px-6 py-8">
         {/* Header bar */}
-        <div className="mb-8 flex items-center justify-between gap-4 rounded-full border-2 border-slate-300 bg-white px-6 py-3 shadow-sm">
+        <div className="mb-8 flex items-center justify-between gap-4 rounded-2xl border-2 border-slate-300 bg-white px-6 py-3 shadow-sm">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
             Video Clip Cutter
           </h1>
