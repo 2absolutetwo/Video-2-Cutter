@@ -408,9 +408,6 @@ function MediaPool({
   const isAudio = kind === "audio";
   const accept = isAudio ? "audio/*" : "video/*";
   const title = isAudio ? "AUDIO POOL" : "VIDEO POOL";
-  const subtitle = isAudio
-    ? "Drop audio files here, then drag onto a card's audio slot"
-    : "Drop video files here, then drag onto a card's video slot";
   const headerGradient = isAudio
     ? "from-emerald-500 to-teal-500"
     : "from-rose-500 to-pink-500";
@@ -436,29 +433,32 @@ function MediaPool({
             <h2 className="text-sm font-bold tracking-wide text-slate-800">
               {title}
             </h2>
-            <p className="text-[11px] text-slate-500">{subtitle}</p>
+            <p className="font-mono text-[11px] text-slate-500">
+              {items.length} file{items.length === 1 ? "" : "s"}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 font-mono text-[11px] text-slate-600">
-            {items.length} item{items.length === 1 ? "" : "s"}
-          </span>
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
             data-testid="button-pool-add"
-            className="inline-flex items-center gap-1.5 rounded-full border border-indigo-300 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100"
+            aria-label="Add files"
+            title="Add files"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
           >
-            <Plus className="h-3 w-3" /> Add files
+            <Plus className="h-4 w-4" />
           </button>
           {items.length > 0 && (
             <button
               type="button"
               onClick={onClear}
               data-testid="button-pool-clear"
-              className="inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100"
+              aria-label="Clear"
+              title="Clear"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
             >
-              <Trash2 className="h-3 w-3" /> Clear
+              <Trash2 className="h-4 w-4" />
             </button>
           )}
           <input
