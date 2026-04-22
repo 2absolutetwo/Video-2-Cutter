@@ -459,7 +459,7 @@ function VideoCutter() {
           <FlowArrow />
 
           {/* 3. Stacked clip boxes */}
-          <div className="flex flex-col justify-center gap-5">
+          <div className="flex flex-col justify-center gap-5 invisible">
             <ClipBox
               label="CLIP 1"
               testId="video-main"
