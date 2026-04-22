@@ -463,7 +463,7 @@ function VideoCutter() {
                 <CheckCircle2 className="h-4 w-4" />
                 Output Video Ready
               </div>
-              <div className="mt-4 overflow-hidden rounded-lg border border-slate-800 bg-black">
+              <div className="mt-4 w-1/4 overflow-hidden rounded-lg border border-slate-800 bg-black">
                 <video
                   src={outputUrl}
                   controls
