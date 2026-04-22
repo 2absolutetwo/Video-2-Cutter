@@ -382,7 +382,7 @@ function VideoCutterApp() {
               onClick={handleAutoCut}
               disabled={!canRunAutoCut}
               data-testid="button-auto-cut"
-              className="rounded-full border-2 border-slate-400 bg-white px-5 py-1.5 text-sm font-semibold tracking-wider text-slate-800 transition hover:border-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl border-2 border-slate-400 bg-white px-5 py-1.5 text-sm font-semibold tracking-wider text-slate-800 transition hover:border-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {anyWorking ? (
                 <span className="inline-flex items-center">
@@ -400,7 +400,7 @@ function VideoCutterApp() {
               onClick={handleBothEnds}
               disabled={!canRunBothEnds}
               data-testid="button-both-ends"
-              className="rounded-full border-2 border-amber-400 bg-white px-5 py-1.5 text-sm font-semibold tracking-wider text-amber-700 transition hover:border-amber-600 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl border-2 border-amber-400 bg-white px-5 py-1.5 text-sm font-semibold tracking-wider text-amber-700 transition hover:border-amber-600 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <span className="inline-flex items-center">
                 <Crop className="mr-2 h-3.5 w-3.5" />
