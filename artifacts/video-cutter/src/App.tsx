@@ -140,6 +140,8 @@ type CardState = {
   hasAudio: boolean;
   hasVideo: boolean;
   isDone: boolean;
+  mergedUrl?: string | null;
+  mergedName?: string;
 };
 
 export type CutterCardHandle = {
@@ -255,6 +257,49 @@ function VideoCutterApp() {
   const [running, setRunning] = useState(false);
   const [downloadCount, setDownloadCount] = useState(0);
   const incrementDownload = useCallback(() => setDownloadCount((n) => n + 1), []);
+  const [zipping, setZipping] = useState(false);
+
+  const handleDownloadZip = async () => {
+    const ready = cardStates
+      .map((c, i) => ({ c, i }))
+      .filter(({ c }) => c.isDone && c.mergedUrl && c.mergedName);
+    if (ready.length === 0) return;
+    setZipping(true);
+    try {
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      const used = new Set<string>();
+      for (const { c, i } of ready) {
+        const res = await fetch(c.mergedUrl!);
+        const blob = await res.blob();
+        let name = c.mergedName || `merged-${i + 1}.mp4`;
+        if (used.has(name)) {
+          const dot = name.lastIndexOf(".");
+          const base = dot > 0 ? name.slice(0, dot) : name;
+          const ext = dot > 0 ? name.slice(dot) : "";
+          name = `${base}-${i + 1}${ext}`;
+        }
+        used.add(name);
+        zip.file(name, blob);
+      }
+      const out = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(out);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `video-clips-${new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-")}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      setDownloadCount((n) => n + ready.length);
+    } catch (e) {
+      console.error("zip failed", e);
+    } finally {
+      setZipping(false);
+    }
+  };
 
   const addCard = () => {
     setNumCards((n) => {
@@ -385,7 +430,9 @@ function VideoCutterApp() {
         cur.hasAudio === s.hasAudio &&
         cur.hasVideo === s.hasVideo &&
         cur.isDone === s.isDone &&
-        cur.mode === s.mode
+        cur.mode === s.mode &&
+        cur.mergedUrl === s.mergedUrl &&
+        cur.mergedName === s.mergedName
       )
         return prev;
       const next = prev.slice();
@@ -465,6 +512,26 @@ function VideoCutterApp() {
             )}
             {ffmpegError && (
               <span className="text-xs text-rose-600">{ffmpegError}</span>
+            )}
+            {completeCount > 0 && (
+              <button
+                onClick={handleDownloadZip}
+                disabled={zipping}
+                data-testid="button-download-zip"
+                className="inline-flex min-w-[140px] items-center justify-center rounded-xl border-2 border-indigo-400 bg-white px-5 py-1.5 text-sm font-semibold tracking-wider text-indigo-700 transition hover:border-indigo-600 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {zipping ? (
+                  <span className="inline-flex items-center">
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    ZIPPING…
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center">
+                    <Download className="mr-2 h-3.5 w-3.5" />
+                    DOWNLOAD ZIP ({completeCount})
+                  </span>
+                )}
+              </button>
             )}
             <button
               onClick={handleAutoCut}
@@ -977,8 +1044,27 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
     const isDone = stage === "done";
 
     useEffect(() => {
-      onStateChange({ canCut, isWorking, mode, hasAudio, hasVideo, isDone });
-    }, [canCut, isWorking, mode, hasAudio, hasVideo, isDone, onStateChange]);
+      onStateChange({
+        canCut,
+        isWorking,
+        mode,
+        hasAudio,
+        hasVideo,
+        isDone,
+        mergedUrl,
+        mergedName,
+      });
+    }, [
+      canCut,
+      isWorking,
+      mode,
+      hasAudio,
+      hasVideo,
+      isDone,
+      mergedUrl,
+      mergedName,
+      onStateChange,
+    ]);
 
     const reset = () => {
       if (outputUrl) URL.revokeObjectURL(outputUrl);
