@@ -270,31 +270,61 @@ function VideoCutterApp() {
     });
   };
 
+  const extractCardNumber = (filename: string): number | null => {
+    const m = filename.match(/(\d+)/);
+    if (!m) return null;
+    const n = parseInt(m[1], 10);
+    if (!isFinite(n) || n <= 0) return null;
+    return n;
+  };
+
   const pendingLoadRef = useRef<{
     kind: "audio" | "video";
-    files: File[];
+    assignments: { cardIndex: number; file: File }[];
+    fallbackFiles: File[];
+    requiredCards: number;
   } | null>(null);
 
   const flushPendingLoad = () => {
     const pending = pendingLoadRef.current;
     if (!pending) return;
-    const { kind, files } = pending;
-    let assigned = 0;
-    for (let i = 0; i < files.length; i++) {
-      const handle = cardRefs.current[i];
-      if (!handle) continue;
-      if (kind === "audio") handle.loadAudio(files[i]);
-      else handle.loadVideo(files[i]);
-      assigned++;
+    const { kind, assignments, fallbackFiles } = pending;
+    const used = new Set<number>();
+    let allAssigned = true;
+
+    for (const { cardIndex, file } of assignments) {
+      const handle = cardRefs.current[cardIndex];
+      if (!handle) {
+        allAssigned = false;
+        continue;
+      }
+      if (kind === "audio") handle.loadAudio(file);
+      else handle.loadVideo(file);
+      used.add(cardIndex);
     }
-    if (assigned === files.length) {
+
+    let nextSlot = 0;
+    for (const file of fallbackFiles) {
+      while (used.has(nextSlot)) nextSlot++;
+      const handle = cardRefs.current[nextSlot];
+      if (!handle) {
+        allAssigned = false;
+        break;
+      }
+      if (kind === "audio") handle.loadAudio(file);
+      else handle.loadVideo(file);
+      used.add(nextSlot);
+      nextSlot++;
+    }
+
+    if (allAssigned) {
       pendingLoadRef.current = null;
     }
   };
 
   useEffect(() => {
     if (!pendingLoadRef.current) return;
-    if (numCards < pendingLoadRef.current.files.length) return;
+    if (numCards < pendingLoadRef.current.requiredCards) return;
     const id = requestAnimationFrame(() => flushPendingLoad());
     return () => cancelAnimationFrame(id);
   }, [numCards]);
@@ -302,10 +332,33 @@ function VideoCutterApp() {
   const loadPoolToCards = (kind: "audio" | "video") => {
     const items = poolRef.current.filter((p) => p.kind === kind);
     if (items.length === 0) return;
-    const files = items.map((it) => it.file);
-    pendingLoadRef.current = { kind, files };
-    if (files.length > numCards) {
-      ensureCards(files.length);
+
+    const assignments: { cardIndex: number; file: File }[] = [];
+    const fallbackFiles: File[] = [];
+    const claimed = new Set<number>();
+
+    for (const it of items) {
+      const num = extractCardNumber(it.file.name);
+      if (num !== null && !claimed.has(num - 1)) {
+        assignments.push({ cardIndex: num - 1, file: it.file });
+        claimed.add(num - 1);
+      } else {
+        fallbackFiles.push(it.file);
+      }
+    }
+
+    let maxIndex = -1;
+    for (const a of assignments) {
+      if (a.cardIndex > maxIndex) maxIndex = a.cardIndex;
+    }
+    const requiredCards = Math.max(
+      maxIndex + 1,
+      assignments.length + fallbackFiles.length,
+    );
+
+    pendingLoadRef.current = { kind, assignments, fallbackFiles, requiredCards };
+    if (requiredCards > numCards) {
+      ensureCards(requiredCards);
     } else {
       flushPendingLoad();
     }
