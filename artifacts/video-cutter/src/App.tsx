@@ -28,6 +28,7 @@ import {
   Trash2,
   FolderOpen,
   GripVertical,
+  Upload,
 } from "lucide-react";
 
 type PoolItem = {
@@ -133,6 +134,8 @@ type CardState = {
 
 export type CutterCardHandle = {
   runCut: () => Promise<void>;
+  loadAudio: (file: File) => void;
+  loadVideo: (file: File) => void;
 };
 
 function VideoCutterApp() {
@@ -250,6 +253,61 @@ function VideoCutterApp() {
     ]);
   };
 
+  const ensureCards = (count: number) => {
+    if (count <= numCards) return;
+    cardRefs.current.length = count;
+    setNumCards(count);
+    setCardStates((prev) => {
+      if (prev.length >= count) return prev;
+      const next = prev.slice();
+      while (next.length < count) {
+        next.push({ canCut: false, isWorking: false });
+      }
+      return next;
+    });
+  };
+
+  const pendingLoadRef = useRef<{
+    kind: "audio" | "video";
+    files: File[];
+  } | null>(null);
+
+  const flushPendingLoad = () => {
+    const pending = pendingLoadRef.current;
+    if (!pending) return;
+    const { kind, files } = pending;
+    let assigned = 0;
+    for (let i = 0; i < files.length; i++) {
+      const handle = cardRefs.current[i];
+      if (!handle) continue;
+      if (kind === "audio") handle.loadAudio(files[i]);
+      else handle.loadVideo(files[i]);
+      assigned++;
+    }
+    if (assigned === files.length) {
+      pendingLoadRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    if (!pendingLoadRef.current) return;
+    if (numCards < pendingLoadRef.current.files.length) return;
+    const id = requestAnimationFrame(() => flushPendingLoad());
+    return () => cancelAnimationFrame(id);
+  }, [numCards]);
+
+  const loadPoolToCards = (kind: "audio" | "video") => {
+    const items = poolRef.current.filter((p) => p.kind === kind);
+    if (items.length === 0) return;
+    const files = items.map((it) => it.file);
+    pendingLoadRef.current = { kind, files };
+    if (files.length > numCards) {
+      ensureCards(files.length);
+    } else {
+      flushPendingLoad();
+    }
+  };
+
   const setCardState = (idx: number) => (s: CardState) => {
     setCardStates((prev) => {
       const cur = prev[idx];
@@ -335,6 +393,7 @@ function VideoCutterApp() {
             onClear={() =>
               setPool((p) => p.filter((x) => x.kind !== "audio"))
             }
+            onLoad={() => loadPoolToCards("audio")}
           />
           <MediaPool
             kind="video"
@@ -344,6 +403,7 @@ function VideoCutterApp() {
             onClear={() =>
               setPool((p) => p.filter((x) => x.kind !== "video"))
             }
+            onLoad={() => loadPoolToCards("video")}
           />
         </div>
 
@@ -396,12 +456,14 @@ function MediaPool({
   onAdd,
   onRemove,
   onClear,
+  onLoad,
 }: {
   kind: "audio" | "video";
   items: PoolItem[];
   onAdd: (files: FileList | File[]) => void;
   onRemove: (id: string) => void;
   onClear: () => void;
+  onLoad: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -439,6 +501,18 @@ function MediaPool({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onLoad}
+            disabled={items.length === 0}
+            data-testid={`button-pool-load-${kind}`}
+            aria-label="Load into cards"
+            title={`Load ${kind} files into cards by number`}
+            className="inline-flex h-8 items-center justify-center gap-1 rounded-full border border-sky-300 bg-sky-50 px-3 text-[11px] font-semibold uppercase tracking-wide text-sky-700 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Load
+          </button>
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
@@ -800,7 +874,15 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
       }
     };
 
-    useImperativeHandle(ref, () => ({ runCut }));
+    useImperativeHandle(ref, () => ({
+      runCut,
+      loadAudio: (file: File) => {
+        void handleAudio(file);
+      },
+      loadVideo: (file: File) => {
+        void handleVideo(file);
+      },
+    }));
 
     return (
       <div
