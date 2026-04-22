@@ -1,6 +1,7 @@
 import {
   createContext,
   forwardRef,
+  useCallback,
   useContext,
   useEffect,
   useImperativeHandle,
@@ -252,6 +253,8 @@ function VideoCutterApp() {
     })),
   );
   const [running, setRunning] = useState(false);
+  const [downloadCount, setDownloadCount] = useState(0);
+  const incrementDownload = useCallback(() => setDownloadCount((n) => n + 1), []);
 
   const addCard = () => {
     setNumCards((n) => {
@@ -575,6 +578,17 @@ function VideoCutterApp() {
                 {errorCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
               </span>
             </div>
+            <div className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50/60 px-2.5 py-1">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500 text-white">
+                <Download className="h-3 w-3" />
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-700">
+                Download
+              </span>
+              <span className="ml-auto text-sm font-bold text-slate-800" data-testid="info-download-count">
+                {downloadCount} <span className="text-[10px] font-medium text-slate-500">files</span>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -615,6 +629,7 @@ function VideoCutterApp() {
               engineReady={ffmpegReady}
               setProgressCb={setProgressCb}
               onStateChange={setCardState(i)}
+              onDownload={incrementDownload}
               highlight={cardStates[i]?.isWorking}
             />
           ))}
@@ -856,12 +871,13 @@ type CutterCardProps = {
   engineReady: boolean;
   setProgressCb: (cb: ((p: number) => void) | null) => void;
   onStateChange: (s: CardState) => void;
+  onDownload: () => void;
   highlight?: boolean;
 };
 
 const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
   function CutterCard(
-    { index, ffmpeg, engineReady, setProgressCb, onStateChange, highlight },
+    { index, ffmpeg, engineReady, setProgressCb, onStateChange, onDownload, highlight },
     ref,
   ) {
     const { toast } = useToast();
@@ -1250,6 +1266,7 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
                 href={mergedUrl ?? undefined}
                 download={mergedName || undefined}
                 disabled={!mergedUrl}
+                onClick={onDownload}
                 icon={<Download className="h-3 w-3" />}
                 label="download"
                 testId={`button-download-${index}`}
@@ -1348,6 +1365,7 @@ function ActionButton({
       <a
         href={disabled ? undefined : href}
         download={download}
+        onClick={disabled ? undefined : onClick}
         className={cls}
         data-testid={testId}
         aria-disabled={disabled}
