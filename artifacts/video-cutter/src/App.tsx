@@ -19,6 +19,7 @@ import {
   Sparkles,
   RefreshCw,
   ArrowRight,
+  Play,
 } from "lucide-react";
 
 const FFMPEG_BASE_URL =
@@ -495,11 +496,12 @@ function VideoCutter() {
               <div className="text-[11px] uppercase tracking-wider text-slate-400">
                 Clip 1 + Clip 2
               </div>
-              <div
-                className="mt-3 flex aspect-video w-full items-center justify-center rounded border border-slate-800 bg-black text-xs text-slate-600"
-                data-testid="video-merged"
-              >
-                {mergedUrl ? "Ready" : "Result appears after Auto Cut"}
+              <div className="mt-3">
+                <PlayablePreview
+                  videoUrl={mergedUrl}
+                  testId="video-merged"
+                  emptyText="Result appears after Auto Cut"
+                />
               </div>
               {mergedUrl && (
                 <>
@@ -562,6 +564,51 @@ function VideoCutter() {
         </div>
       </div>
     </div>
+  );
+}
+
+function PlayablePreview({
+  videoUrl,
+  testId,
+  emptyText = "Empty",
+}: {
+  videoUrl: string | null;
+  testId: string;
+  emptyText?: string;
+}) {
+  const [playing, setPlaying] = useState(false);
+
+  if (!videoUrl) {
+    return (
+      <div className="flex aspect-video w-full items-center justify-center rounded border border-slate-800 bg-black text-xs text-slate-600">
+        {emptyText}
+      </div>
+    );
+  }
+
+  if (playing) {
+    return (
+      <video
+        src={videoUrl}
+        controls
+        autoPlay
+        className="aspect-video w-full rounded border border-slate-800 bg-black"
+        data-testid={testId}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setPlaying(true)}
+      className="group relative flex aspect-video w-full items-center justify-center rounded border border-slate-800 bg-black transition hover:border-slate-600"
+      data-testid={`${testId}-play`}
+    >
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 backdrop-blur transition group-hover:scale-110 group-hover:bg-white/20">
+        <Play className="ml-0.5 h-5 w-5 fill-white text-white" />
+      </span>
+    </button>
   );
 }
 
@@ -629,12 +676,7 @@ function ClipBox({
       <div className="mb-2 text-sm font-semibold tracking-wide text-slate-100">
         {label}
       </div>
-      <div
-        className="flex aspect-video w-full items-center justify-center rounded border border-slate-800 bg-black text-xs text-slate-600"
-        data-testid={testId}
-      >
-        {videoUrl ? "Ready" : "Empty"}
-      </div>
+      <PlayablePreview videoUrl={videoUrl} testId={testId} />
       {videoUrl && (
         <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
           {fileName && <span className="truncate text-slate-300">{fileName}</span>}
