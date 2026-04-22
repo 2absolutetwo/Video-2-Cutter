@@ -30,6 +30,7 @@ import {
   GripVertical,
   Upload,
   AlertTriangle,
+  FastForward,
 } from "lucide-react";
 
 type PoolItem = {
@@ -131,6 +132,7 @@ type Stage = "idle" | "reading" | "cutting" | "done" | "error";
 type CardState = {
   canCut: boolean;
   isWorking: boolean;
+  mode?: "extend" | "speed" | null;
 };
 
 export type CutterCardHandle = {
@@ -323,21 +325,34 @@ function VideoCutterApp() {
 
   const anyWorking =
     running || cardStates.some((c) => c.isWorking);
-  const anyCanCut = cardStates.some((c) => c.canCut);
-  const globalCanCut = ffmpegReady && anyCanCut && !anyWorking;
+  const anyCanExtend = cardStates.some(
+    (c) => c.canCut && c.mode === "extend",
+  );
+  const anyCanSpeed = cardStates.some(
+    (c) => c.canCut && c.mode === "speed",
+  );
+  const canRunAutoCut = ffmpegReady && anyCanExtend && !anyWorking;
+  const canRunSpeedUp = ffmpegReady && anyCanSpeed && !anyWorking;
 
-  const handleAutoCut = async () => {
-    if (!globalCanCut) return;
+  const runByMode = async (target: "extend" | "speed") => {
     setRunning(true);
     try {
       for (let i = 0; i < numCards; i++) {
-        if (cardStates[i]?.canCut && cardRefs.current[i]) {
+        const cs = cardStates[i];
+        if (cs?.canCut && cs.mode === target && cardRefs.current[i]) {
           await cardRefs.current[i]!.runCut();
         }
       }
     } finally {
       setRunning(false);
     }
+  };
+
+  const handleAutoCut = () => {
+    if (canRunAutoCut) void runByMode("extend");
+  };
+  const handleSpeedUp = () => {
+    if (canRunSpeedUp) void runByMode("speed");
   };
 
   return (
@@ -380,7 +395,7 @@ function VideoCutterApp() {
             )}
             <button
               onClick={handleAutoCut}
-              disabled={!globalCanCut}
+              disabled={!canRunAutoCut}
               data-testid="button-auto-cut"
               className="rounded-full border-2 border-slate-400 bg-white px-5 py-1.5 text-sm font-semibold tracking-wider text-slate-800 transition hover:border-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -395,6 +410,17 @@ function VideoCutterApp() {
                   AUTO CUT
                 </span>
               )}
+            </button>
+            <button
+              onClick={handleSpeedUp}
+              disabled={!canRunSpeedUp}
+              data-testid="button-speed-up"
+              className="rounded-full border-2 border-amber-400 bg-white px-5 py-1.5 text-sm font-semibold tracking-wider text-amber-700 transition hover:border-amber-600 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <span className="inline-flex items-center">
+                <FastForward className="mr-2 h-3.5 w-3.5" />
+                SPEED UP
+              </span>
             </button>
           </div>
         </div>
@@ -769,9 +795,16 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
       ((cutTime !== null && cutTime > 0 && cutTime < videoDuration) ||
         speedAllowed);
 
+    const mode: "extend" | "speed" | null =
+      cutTime !== null && cutTime > 0 && videoDuration !== null && cutTime < videoDuration
+        ? "extend"
+        : speedAllowed
+        ? "speed"
+        : null;
+
     useEffect(() => {
-      onStateChange({ canCut, isWorking });
-    }, [canCut, isWorking, onStateChange]);
+      onStateChange({ canCut, isWorking, mode });
+    }, [canCut, isWorking, mode, onStateChange]);
 
     const reset = () => {
       if (outputUrl) URL.revokeObjectURL(outputUrl);
@@ -826,28 +859,34 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
         const mimeType = outputExt === "webm" ? "video/webm" : "video/mp4";
 
         if (isSpeedCase) {
-          // Case 2: Video > Audio — speed up video to match audio duration
+          // Case 2: Video > Audio — speed up video to match audio duration.
+          // Force output to .mp4 since re-encoding is required and webm/vp8
+          // encoder is not available in ffmpeg.wasm.
           setStage("cutting");
           const ratio = audioDuration / videoDuration; // < 1 (faster)
+          const speedMergedName = `Merged ${index}.mp4`;
+          const speedMergedFile = `${ns}${speedMergedName}`;
           await ffmpeg.exec([
             "-i",
             inputName,
             "-filter:v",
             `setpts=${ratio.toFixed(6)}*PTS`,
             "-an",
-            "-preset",
-            "ultrafast",
-            mergedFile,
+            "-c:v",
+            "mpeg4",
+            "-q:v",
+            "5",
+            speedMergedFile,
           ]);
 
-          const mergedData = await ffmpeg.readFile(mergedFile);
+          const mergedData = await ffmpeg.readFile(speedMergedFile);
           const mergedBuf = mergedData as Uint8Array;
           const mergedBlob = new Blob([mergedBuf.slice().buffer], {
-            type: mimeType,
+            type: "video/mp4",
           });
           const mUrl = URL.createObjectURL(mergedBlob);
           setMergedUrl(mUrl);
-          setMergedName(mergedFileName);
+          setMergedName(speedMergedName);
           setMergedSize(mergedBlob.size);
           setMergedDuration(audioDuration);
 
@@ -856,7 +895,7 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
 
           try {
             await ffmpeg.deleteFile(inputName);
-            await ffmpeg.deleteFile(mergedFile);
+            await ffmpeg.deleteFile(speedMergedFile);
           } catch {
             /* ignore */
           }
