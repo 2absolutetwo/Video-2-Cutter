@@ -358,57 +358,7 @@ function VideoCutter() {
         {/* Calculation panel */}
         <Card className="mt-6 border-slate-800 bg-slate-900/60 backdrop-blur">
           <CardContent className="p-6">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
-              <Scissors className="h-4 w-4 text-indigo-400" />
-              Auto Cut Calculation
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <Stat
-                label="Audio time"
-                value={audioDuration !== null ? formatSeconds(audioDuration) : "—"}
-                tone="emerald"
-              />
-              <Stat
-                label="Video time"
-                value={videoDuration !== null ? formatSeconds(videoDuration) : "—"}
-                tone="rose"
-              />
-              <Stat
-                label="Cutting time"
-                value={cutTime !== null ? formatSeconds(cutTime) : "—"}
-                tone={
-                  cutTime === null
-                    ? "slate"
-                    : cutTime > 0 && cutTime < (videoDuration ?? Infinity)
-                      ? "indigo"
-                      : "amber"
-                }
-                hint="Last N seconds of the video"
-              />
-            </div>
-
-            {audioDuration !== null && videoDuration !== null && (
-              <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 font-mono text-xs text-slate-400">
-                {formatSeconds(audioDuration)} − {formatSeconds(videoDuration)} ={" "}
-                <span className="text-slate-200">
-                  {formatSeconds(cutTime ?? 0)}
-                </span>
-                {cutTime !== null && cutTime <= 0 && (
-                  <span className="ml-2 text-amber-400">
-                    · Audio must be longer than video
-                  </span>
-                )}
-                {cutTime !== null &&
-                  videoDuration !== null &&
-                  cutTime >= videoDuration && (
-                    <span className="ml-2 text-amber-400">
-                      · Cut time can't exceed video length
-                    </span>
-                  )}
-              </div>
-            )}
-
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
                 onClick={handleCut}
