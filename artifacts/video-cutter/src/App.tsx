@@ -18,6 +18,9 @@ import {
   Download,
   X,
   ArrowRight,
+  Music,
+  Film,
+  UploadCloud,
 } from "lucide-react";
 
 const FFMPEG_BASE_URL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
@@ -677,18 +680,42 @@ function UploadBox({
   testIdSuffix?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const accent =
-    kind === "audio"
-      ? "border-emerald-500 bg-emerald-50/40 text-emerald-700 hover:bg-emerald-50"
-      : "border-rose-500 bg-rose-50/40 text-rose-700 hover:bg-rose-50";
-  const label = kind === "audio" ? "AUDIO UPLOAD" : "video UPLOAD";
-  const accept = kind === "audio" ? "audio/*" : "video/*";
+  const isAudio = kind === "audio";
+  const hasFile = !!file;
+
+  const palette = isAudio
+    ? {
+        gradient:
+          "from-emerald-50 via-white to-teal-50/60 hover:from-emerald-100/80 hover:via-white hover:to-teal-100/60",
+        ring: "ring-emerald-200/70 hover:ring-emerald-300",
+        ringActive: "ring-emerald-400 shadow-emerald-200/50",
+        iconBg: "bg-gradient-to-br from-emerald-400 to-teal-500",
+        iconShadow: "shadow-emerald-300/40",
+        accentText: "text-emerald-700",
+        chipBg: "bg-emerald-500/10 text-emerald-700 ring-emerald-500/20",
+        dot: "bg-emerald-500",
+      }
+    : {
+        gradient:
+          "from-rose-50 via-white to-pink-50/60 hover:from-rose-100/80 hover:via-white hover:to-pink-100/60",
+        ring: "ring-rose-200/70 hover:ring-rose-300",
+        ringActive: "ring-rose-400 shadow-rose-200/50",
+        iconBg: "bg-gradient-to-br from-rose-400 to-pink-500",
+        iconShadow: "shadow-rose-300/40",
+        accentText: "text-rose-700",
+        chipBg: "bg-rose-500/10 text-rose-700 ring-rose-500/20",
+        dot: "bg-rose-500",
+      };
+
+  const Icon = isAudio ? Music : Film;
+  const label = isAudio ? "Audio" : "Video";
+  const accept = isAudio ? "audio/*" : "video/*";
 
   return (
     <div
-      className={`group cursor-pointer rounded-md border-2 border-dashed px-3 py-2 transition-colors ${accent} ${
-        disabled ? "pointer-events-none opacity-50" : ""
-      }`}
+      className={`group relative cursor-pointer overflow-hidden rounded-xl bg-gradient-to-br ${palette.gradient} px-3 py-2.5 ring-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
+        hasFile ? `${palette.ringActive} shadow-md` : palette.ring
+      } ${disabled ? "pointer-events-none opacity-50" : ""}`}
       onClick={() => inputRef.current?.click()}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
@@ -706,23 +733,48 @@ function UploadBox({
         onChange={(e) => onChange(e.target.files?.[0] ?? null)}
         data-testid={`input-${kind}${testIdSuffix}`}
       />
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold tracking-wide">{label}</span>
-        {duration !== null && (
-          <span className="rounded-full bg-white/70 px-1.5 font-mono text-[10px]">
-            {formatSeconds(duration)}
-          </span>
-        )}
-      </div>
-      {file && (
+      <div className="flex items-center gap-2.5">
         <div
-          className="mt-0.5 truncate text-[10px] text-slate-600"
-          data-testid={`text-${kind}-name${testIdSuffix}`}
-          title={file.name}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${palette.iconBg} text-white shadow-md ${palette.iconShadow}`}
         >
-          {file.name} · {formatBytes(file.size)}
+          <Icon className="h-4 w-4" strokeWidth={2.25} />
         </div>
-      )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className={`text-[11px] font-semibold tracking-wide ${palette.accentText}`}>
+              {label}
+            </span>
+            {duration !== null ? (
+              <span
+                className={`rounded-full px-1.5 py-px font-mono text-[10px] ring-1 ${palette.chipBg}`}
+              >
+                {formatSeconds(duration)}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] font-medium text-slate-400">
+                <UploadCloud className="h-3 w-3" />
+                upload
+              </span>
+            )}
+          </div>
+          {hasFile ? (
+            <div
+              className="mt-0.5 flex items-center gap-1.5 truncate text-[10px] text-slate-600"
+              data-testid={`text-${kind}-name${testIdSuffix}`}
+              title={file.name}
+            >
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${palette.dot}`} />
+              <span className="truncate">
+                {file.name} · {formatBytes(file.size)}
+              </span>
+            </div>
+          ) : (
+            <div className="mt-0.5 truncate text-[10px] text-slate-400">
+              Drop or click to add {isAudio ? "an audio" : "a video"} file
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
