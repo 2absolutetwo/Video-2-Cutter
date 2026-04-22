@@ -533,43 +533,44 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
             <ArrowRight className="h-5 w-5 text-slate-500" />
           </div>
 
-          {/* Preview screen */}
-          <div className="flex shrink-0 items-center">
+          {/* Preview + action buttons stacked vertically */}
+          <div className="flex shrink-0 flex-col items-center gap-2">
             <PlayablePreview
               videoUrl={mergedUrl}
               playing={playing}
               setPlaying={setPlaying}
               testId={`video-merged-${index}`}
             />
-          </div>
-
-          {/* Action buttons stacked */}
-          <div className="flex shrink-0 flex-col justify-center gap-1.5">
-            <ActionButton
-              onClick={reset}
-              disabled={
-                !audioFile && !videoFile && !mergedUrl && !errorMsg
-              }
-              icon={<X className="h-3 w-3" />}
-              label="cancel"
-              testId={`button-cancel-${index}`}
-            />
-            <ActionButton
-              onClick={() => mergedUrl && setPlaying(true)}
-              disabled={!mergedUrl}
-              icon={<Play className="h-3 w-3" />}
-              label="play"
-              testId={`button-play-${index}`}
-            />
-            <ActionButton
-              as="a"
-              href={mergedUrl ?? undefined}
-              download={mergedName || undefined}
-              disabled={!mergedUrl}
-              icon={<Download className="h-3 w-3" />}
-              label="download"
-              testId={`button-download-${index}`}
-            />
+            <div className="flex w-full items-center justify-center gap-1.5">
+              <ActionButton
+                onClick={reset}
+                disabled={
+                  !audioFile && !videoFile && !mergedUrl && !errorMsg
+                }
+                icon={<X className="h-3 w-3" />}
+                label="cancel"
+                testId={`button-cancel-${index}`}
+                variant="cancel"
+              />
+              <ActionButton
+                onClick={() => mergedUrl && setPlaying(true)}
+                disabled={!mergedUrl}
+                icon={<Play className="h-3 w-3" />}
+                label="play"
+                testId={`button-play-${index}`}
+                variant="play"
+              />
+              <ActionButton
+                as="a"
+                href={mergedUrl ?? undefined}
+                download={mergedName || undefined}
+                disabled={!mergedUrl}
+                icon={<Download className="h-3 w-3" />}
+                label="download"
+                testId={`button-download-${index}`}
+                variant="download"
+              />
+            </div>
           </div>
         </div>
 
@@ -622,6 +623,7 @@ function ActionButton({
   as,
   href,
   download,
+  variant = "cancel",
 }: {
   onClick?: () => void;
   disabled?: boolean;
@@ -631,8 +633,16 @@ function ActionButton({
   as?: "a";
   href?: string;
   download?: string;
+  variant?: "cancel" | "play" | "download";
 }) {
-  const cls = `inline-flex items-center justify-center gap-1 rounded-full border border-slate-400 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 transition hover:border-slate-700 hover:bg-slate-100 ${
+  const variantCls =
+    variant === "play"
+      ? "border-emerald-300 bg-gradient-to-b from-emerald-50 to-emerald-100 text-emerald-700 hover:from-emerald-100 hover:to-emerald-200 hover:border-emerald-500"
+      : variant === "download"
+      ? "border-indigo-300 bg-gradient-to-b from-indigo-50 to-indigo-100 text-indigo-700 hover:from-indigo-100 hover:to-indigo-200 hover:border-indigo-500"
+      : "border-rose-300 bg-gradient-to-b from-rose-50 to-rose-100 text-rose-700 hover:from-rose-100 hover:to-rose-200 hover:border-rose-500";
+
+  const cls = `inline-flex flex-1 items-center justify-center gap-1 rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-wide shadow-sm transition active:scale-95 ${variantCls} ${
     disabled ? "pointer-events-none opacity-40" : ""
   }`;
 
@@ -793,7 +803,7 @@ function PlayablePreview({
   if (!videoUrl) {
     return (
       <div
-        className="flex h-[88px] w-[120px] items-center justify-center rounded-md border-2 border-slate-400 bg-white text-[10px] text-slate-400"
+        className="flex h-[96px] w-[150px] items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-[10px] text-slate-400"
         data-testid={`${testId}-empty`}
       >
         preview
@@ -807,7 +817,7 @@ function PlayablePreview({
         src={videoUrl}
         controls
         autoPlay
-        className="h-[88px] w-[120px] rounded-md border-2 border-slate-400 bg-black"
+        className="h-[96px] w-[150px] rounded-lg border-2 border-slate-700 bg-black shadow-md"
         data-testid={testId}
         onEnded={() => setPlaying(false)}
       />
@@ -818,7 +828,7 @@ function PlayablePreview({
     <button
       type="button"
       onClick={() => setPlaying(true)}
-      className="group relative flex h-[88px] w-[120px] items-center justify-center rounded-md border-2 border-slate-400 bg-black transition hover:border-slate-700"
+      className="group relative flex h-[96px] w-[150px] items-center justify-center rounded-lg border-2 border-slate-700 bg-black shadow-md transition hover:border-slate-900"
       data-testid={`${testId}-play`}
     >
       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 backdrop-blur transition group-hover:scale-110 group-hover:bg-white/30">
