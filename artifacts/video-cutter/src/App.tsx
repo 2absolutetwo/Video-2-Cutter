@@ -495,19 +495,11 @@ function VideoCutter() {
               <div className="text-[11px] uppercase tracking-wider text-slate-400">
                 Clip 1 + Clip 2
               </div>
-              <div className="mt-3 overflow-hidden rounded border border-slate-800 bg-black">
-                {mergedUrl ? (
-                  <video
-                    src={mergedUrl}
-                    controls
-                    className="h-auto w-full"
-                    data-testid="video-merged"
-                  />
-                ) : (
-                  <div className="flex aspect-video w-full items-center justify-center text-xs text-slate-600">
-                    Result appears after Auto Cut
-                  </div>
-                )}
+              <div
+                className="mt-3 flex aspect-video w-full items-center justify-center rounded border border-slate-800 bg-black text-xs text-slate-600"
+                data-testid="video-merged"
+              >
+                {mergedUrl ? "Ready" : "Result appears after Auto Cut"}
               </div>
               {mergedUrl && (
                 <>
@@ -637,19 +629,11 @@ function ClipBox({
       <div className="mb-2 text-sm font-semibold tracking-wide text-slate-100">
         {label}
       </div>
-      <div className="overflow-hidden rounded border border-slate-800 bg-black">
-        {videoUrl ? (
-          <video
-            src={videoUrl}
-            controls
-            className="h-auto w-full"
-            data-testid={testId}
-          />
-        ) : (
-          <div className="flex aspect-video w-full items-center justify-center text-xs text-slate-600">
-            Empty
-          </div>
-        )}
+      <div
+        className="flex aspect-video w-full items-center justify-center rounded border border-slate-800 bg-black text-xs text-slate-600"
+        data-testid={testId}
+      >
+        {videoUrl ? "Ready" : "Empty"}
       </div>
       {videoUrl && (
         <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
