@@ -458,32 +458,6 @@ function VideoCutter() {
 
           <FlowArrow />
 
-          {/* 3. Stacked clip boxes */}
-          <div className="flex flex-col justify-center gap-5 invisible">
-            <ClipBox
-              label="CLIP 1"
-              testId="video-main"
-              videoUrl={videoUrl}
-              fileName={videoFile?.name}
-              fileSize={videoFile?.size ?? null}
-              duration={videoDuration}
-              downloadUrl={videoUrl}
-              downloadName={videoFile?.name}
-            />
-            <ClipBox
-              label="CLIP 2"
-              testId="video-output"
-              videoUrl={outputUrl}
-              fileName={outputName || null}
-              fileSize={outputSize || null}
-              duration={cutTime}
-              downloadUrl={outputUrl}
-              downloadName={outputName}
-            />
-          </div>
-
-          <FlowArrow />
-
           {/* 4. Merged Video */}
           <div className="flex flex-col justify-center">
             <div className="rounded-lg border-2 border-slate-200/70 bg-slate-900/40 p-3 shadow-[0_0_30px_-15px_rgba(148,163,184,0.6)]">
