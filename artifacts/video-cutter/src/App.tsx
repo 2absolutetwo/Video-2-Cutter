@@ -2,7 +2,6 @@ import {
   forwardRef,
   useEffect,
   useImperativeHandle,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -10,27 +9,19 @@ import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Upload,
-  Music,
-  Video,
-  Scissors,
-  Download,
-  CheckCircle2,
   Loader2,
-  FileAudio,
-  FileVideo,
-  Sparkles,
-  RefreshCw,
-  ArrowRight,
+  CheckCircle2,
+  Scissors,
   Play,
+  Download,
+  X,
+  ArrowRight,
 } from "lucide-react";
 
-const FFMPEG_BASE_URL =
-  "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
+const FFMPEG_BASE_URL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
+const NUM_CARDS = 6;
 
 function formatSeconds(s: number): string {
   if (!isFinite(s) || s < 0) return "0.00s";
@@ -109,12 +100,7 @@ function getMediaDuration(file: File, kind: "audio" | "video"): Promise<number> 
   });
 }
 
-type Stage =
-  | "idle"
-  | "reading"
-  | "cutting"
-  | "done"
-  | "error";
+type Stage = "idle" | "reading" | "cutting" | "done" | "error";
 
 type CardState = {
   canCut: boolean;
@@ -171,32 +157,40 @@ function VideoCutterApp() {
     progressCbRef.current = cb;
   };
 
-  const card1Ref = useRef<CutterCardHandle | null>(null);
-  const card2Ref = useRef<CutterCardHandle | null>(null);
-
-  const [card1State, setCard1State] = useState<CardState>({
-    canCut: false,
-    isWorking: false,
-  });
-  const [card2State, setCard2State] = useState<CardState>({
-    canCut: false,
-    isWorking: false,
-  });
+  const cardRefs = useRef<(CutterCardHandle | null)[]>(
+    Array(NUM_CARDS).fill(null),
+  );
+  const [cardStates, setCardStates] = useState<CardState[]>(
+    Array.from({ length: NUM_CARDS }, () => ({
+      canCut: false,
+      isWorking: false,
+    })),
+  );
   const [running, setRunning] = useState(false);
 
-  const anyWorking = running || card1State.isWorking || card2State.isWorking;
-  const anyCanCut = card1State.canCut || card2State.canCut;
+  const setCardState = (idx: number) => (s: CardState) => {
+    setCardStates((prev) => {
+      const cur = prev[idx];
+      if (cur.canCut === s.canCut && cur.isWorking === s.isWorking) return prev;
+      const next = prev.slice();
+      next[idx] = s;
+      return next;
+    });
+  };
+
+  const anyWorking =
+    running || cardStates.some((c) => c.isWorking);
+  const anyCanCut = cardStates.some((c) => c.canCut);
   const globalCanCut = ffmpegReady && anyCanCut && !anyWorking;
 
   const handleAutoCut = async () => {
     if (!globalCanCut) return;
     setRunning(true);
     try {
-      if (card1State.canCut && card1Ref.current) {
-        await card1Ref.current.runCut();
-      }
-      if (card2State.canCut && card2Ref.current) {
-        await card2Ref.current.runCut();
+      for (let i = 0; i < NUM_CARDS; i++) {
+        if (cardStates[i].canCut && cardRefs.current[i]) {
+          await cardRefs.current[i]!.runCut();
+        }
       }
     } finally {
       setRunning(false);
@@ -204,92 +198,70 @@ function VideoCutterApp() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100">
-      <div className="mx-auto max-w-7xl px-6 py-12">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-medium text-indigo-300">
-            <Sparkles className="h-3.5 w-3.5" />
-            Browser-based · No upload to server · Lossless cut
-          </div>
-          <h1 className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl">
+    <div className="min-h-screen w-full bg-slate-50 text-slate-900">
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        {/* Header bar */}
+        <div className="mb-8 flex items-center justify-between gap-4 rounded-full border-2 border-slate-300 bg-white px-6 py-3 shadow-sm">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
             Video Clip Cutter
           </h1>
-          <p className="mt-3 text-base text-slate-400">
-            Upload into both cutters, then press Auto Cut — Cutter 1 runs first,
-            then Cutter 2.
-          </p>
-          {ffmpegLoading && (
-            <div className="mt-4 inline-flex items-center gap-2 text-sm text-slate-400">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading video engine...
-            </div>
-          )}
-          {!ffmpegLoading && ffmpegReady && (
-            <div className="mt-4 inline-flex items-center gap-2 text-sm text-emerald-400">
-              <CheckCircle2 className="h-4 w-4" />
-              Engine ready
-            </div>
-          )}
-          {ffmpegError && (
-            <div className="mt-4 inline-flex items-center gap-2 text-sm text-rose-400">
-              {ffmpegError}
-            </div>
-          )}
-        </div>
-
-        {/* Global Auto Cut button */}
-        <div className="mb-6 flex justify-end">
-          <button
-            onClick={handleAutoCut}
-            disabled={!globalCanCut}
-            data-testid="button-auto-cut"
-            className="group relative rounded-lg border-2 border-cyan-400 bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 px-6 py-3 text-sm font-semibold tracking-widest text-cyan-200 shadow-[0_0_30px_-10px_rgba(34,211,238,0.6)] transition hover:from-cyan-400/20 hover:to-cyan-500/10 hover:shadow-[0_0_40px_-8px_rgba(34,211,238,0.8)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-          >
-            {anyWorking ? (
-              <span className="inline-flex items-center">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {card1State.isWorking
-                  ? "CUTTING 1..."
-                  : card2State.isWorking
-                    ? "CUTTING 2..."
-                    : "WORKING..."}
-              </span>
-            ) : (
-              <span className="inline-flex items-center">
-                <Scissors className="mr-2 h-4 w-4" />
-                AUTO CUT
+          <div className="flex items-center gap-3">
+            {ffmpegLoading && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Loading engine…
               </span>
             )}
-          </button>
+            {!ffmpegLoading && ffmpegReady && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Ready
+              </span>
+            )}
+            {ffmpegError && (
+              <span className="text-xs text-rose-600">{ffmpegError}</span>
+            )}
+            <button
+              onClick={handleAutoCut}
+              disabled={!globalCanCut}
+              data-testid="button-auto-cut"
+              className="rounded-full border-2 border-slate-400 bg-white px-5 py-1.5 text-sm font-semibold tracking-wider text-slate-800 transition hover:border-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {anyWorking ? (
+                <span className="inline-flex items-center">
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  WORKING…
+                </span>
+              ) : (
+                <span className="inline-flex items-center">
+                  <Scissors className="mr-2 h-3.5 w-3.5" />
+                  AUTO CUT
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Two cutter cards */}
-        <div className="space-y-6">
-          <CutterCard
-            ref={card1Ref}
-            index={1}
-            ffmpeg={ffmpegRef.current}
-            engineReady={ffmpegReady}
-            setProgressCb={setProgressCb}
-            onStateChange={setCard1State}
-            highlight={card1State.isWorking}
-          />
-          <CutterCard
-            ref={card2Ref}
-            index={2}
-            ffmpeg={ffmpegRef.current}
-            engineReady={ffmpegReady}
-            setProgressCb={setProgressCb}
-            onStateChange={setCard2State}
-            highlight={card2State.isWorking}
-          />
+        {/* 2-column grid of 6 cards */}
+        <div className="grid gap-5 md:grid-cols-2">
+          {Array.from({ length: NUM_CARDS }, (_, i) => (
+            <CutterCard
+              key={i}
+              ref={(el) => {
+                cardRefs.current[i] = el;
+              }}
+              index={i + 1}
+              ffmpeg={ffmpegRef.current}
+              engineReady={ffmpegReady}
+              setProgressCb={setProgressCb}
+              onStateChange={setCardState(i)}
+              highlight={cardStates[i].isWorking}
+            />
+          ))}
         </div>
 
-        {/* Footer */}
-        <div className="mt-12 text-center text-xs text-slate-500">
-          Files never leave your device. Processing happens entirely in your
-          browser.
+        <div className="mt-10 text-center text-xs text-slate-500">
+          Files never leave your device. All processing happens in your browser.
         </div>
       </div>
     </div>
@@ -325,6 +297,7 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
     const [mergedSize, setMergedSize] = useState<number>(0);
     const [mergedDuration, setMergedDuration] = useState<number>(0);
     const [errorMsg, setErrorMsg] = useState<string>("");
+    const [playing, setPlaying] = useState(false);
 
     const handleAudio = async (file: File | null) => {
       setAudioFile(file);
@@ -378,7 +351,6 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
       cutTime < videoDuration &&
       !isWorking;
 
-    // Report state up
     useEffect(() => {
       onStateChange({ canCut, isWorking });
     }, [canCut, isWorking, onStateChange]);
@@ -398,6 +370,7 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
       setStage("idle");
       setProgress(0);
       setErrorMsg("");
+      setPlaying(false);
     };
 
     const runCut = async () => {
@@ -518,44 +491,23 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
 
     return (
       <div
-        className={`rounded-2xl border bg-slate-900/40 p-5 shadow-lg backdrop-blur transition-colors ${
+        className={`rounded-2xl border-2 bg-white p-4 shadow-sm transition-colors ${
           highlight
-            ? "border-cyan-400/70 shadow-[0_0_30px_-10px_rgba(34,211,238,0.5)]"
-            : "border-slate-700/70"
+            ? "border-cyan-500 shadow-md"
+            : "border-slate-300"
         }`}
       >
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-600 bg-slate-800 font-mono text-sm font-bold text-slate-200">
+        <div className="flex items-stretch gap-3">
+          {/* Number circle */}
+          <div className="flex shrink-0 items-center justify-center">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-slate-400 font-mono text-sm font-bold text-slate-700">
               {index}
             </div>
-            <div className="text-sm font-semibold uppercase tracking-wider text-slate-300">
-              Cutter {index}
-            </div>
-            {cutTime !== null && cutTime > 0 && (
-              <div className="rounded-md border border-cyan-500/30 bg-cyan-500/5 px-2.5 py-1 font-mono text-[11px] text-cyan-300">
-                trim −{formatSeconds(cutTime)}
-              </div>
-            )}
           </div>
-          {(audioFile || videoFile || outputUrl) && !isWorking && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={reset}
-              className="text-slate-300 hover:text-white"
-              data-testid={`button-reset-${index}`}
-            >
-              <RefreshCw className="mr-2 h-3.5 w-3.5" />
-              Reset
-            </Button>
-          )}
-        </div>
 
-        <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.1fr)]">
           {/* Stacked uploads */}
-          <div className="flex flex-col justify-center gap-3">
-            <UploadCard
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+            <UploadBox
               kind="audio"
               file={audioFile}
               duration={audioDuration}
@@ -563,7 +515,7 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
               disabled={isWorking}
               testIdSuffix={`-${index}`}
             />
-            <UploadCard
+            <UploadBox
               kind="video"
               file={videoFile}
               duration={videoDuration}
@@ -573,142 +525,143 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
             />
           </div>
 
-          <FlowArrow />
+          {/* Arrow */}
+          <div className="flex shrink-0 items-center justify-center">
+            <ArrowRight className="h-5 w-5 text-slate-500" />
+          </div>
 
-          {/* Merged Video */}
-          <div className="flex flex-col justify-center">
-            <div className="rounded-lg border-2 border-slate-200/70 bg-slate-900/40 p-3 shadow-[0_0_30px_-15px_rgba(148,163,184,0.6)]">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-sm font-semibold tracking-wide text-slate-100">
-                  Merged Video
-                </div>
-                <Sparkles className="h-3.5 w-3.5 text-purple-300" />
-              </div>
-              <div className="text-[11px] uppercase tracking-wider text-slate-400">
-                Clip 1 + Clip 2
-              </div>
-              <div className="mt-3">
-                <PlayablePreview
-                  videoUrl={mergedUrl}
-                  testId={`video-merged-${index}`}
-                  emptyText="Result appears after Auto Cut"
-                />
-              </div>
-              {mergedUrl && (
-                <>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
-                    <span className="truncate text-slate-300">{mergedName}</span>
-                    <span className="text-slate-600">·</span>
-                    <span>{formatBytes(mergedSize)}</span>
-                    <span className="text-slate-600">·</span>
-                    <span>{formatSeconds(mergedDuration)}</span>
-                  </div>
-                  <a
-                    href={mergedUrl}
-                    download={mergedName}
-                    className="mt-3 inline-block w-full"
-                  >
-                    <Button
-                      className="w-full bg-purple-500 text-white hover:bg-purple-400"
-                      data-testid={`button-download-merged-${index}`}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Button>
-                  </a>
-                </>
-              )}
-            </div>
+          {/* Preview screen */}
+          <div className="flex shrink-0 items-center">
+            <PlayablePreview
+              videoUrl={mergedUrl}
+              playing={playing}
+              setPlaying={setPlaying}
+              testId={`video-merged-${index}`}
+            />
+          </div>
+
+          {/* Action buttons stacked */}
+          <div className="flex shrink-0 flex-col justify-center gap-1.5">
+            <ActionButton
+              onClick={reset}
+              disabled={
+                !audioFile && !videoFile && !mergedUrl && !errorMsg
+              }
+              icon={<X className="h-3 w-3" />}
+              label="cancel"
+              testId={`button-cancel-${index}`}
+            />
+            <ActionButton
+              onClick={() => mergedUrl && setPlaying(true)}
+              disabled={!mergedUrl}
+              icon={<Play className="h-3 w-3" />}
+              label="play"
+              testId={`button-play-${index}`}
+            />
+            <ActionButton
+              as="a"
+              href={mergedUrl ?? undefined}
+              download={mergedName || undefined}
+              disabled={!mergedUrl}
+              icon={<Download className="h-3 w-3" />}
+              label="download"
+              testId={`button-download-${index}`}
+            />
           </div>
         </div>
 
-        {/* Per-card progress + error */}
-        {(isWorking || errorMsg) && (
-          <Card className="mt-4 border-slate-800 bg-slate-900/60 backdrop-blur">
-            <CardContent className="p-4">
-              {isWorking && (
-                <div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                    <div
-                      className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-200"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <div className="mt-2 text-right text-xs text-slate-400">
-                    {progress}% · {stage === "reading" ? "reading" : "cutting"}
-                  </div>
-                </div>
-              )}
-              {errorMsg && (
-                <div className="mt-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-                  {errorMsg}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* Status row */}
+        {(isWorking || errorMsg || (cutTime !== null && cutTime > 0) || mergedUrl) && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+            {cutTime !== null && cutTime > 0 && !mergedUrl && (
+              <span className="rounded border border-cyan-300 bg-cyan-50 px-2 py-0.5 font-mono text-cyan-700">
+                trim −{formatSeconds(cutTime)}
+              </span>
+            )}
+            {isWorking && (
+              <span className="flex flex-1 items-center gap-2">
+                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+                  <span
+                    className="block h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                </span>
+                <span className="font-mono">
+                  {progress}% · {stage}
+                </span>
+              </span>
+            )}
+            {mergedUrl && !isWorking && (
+              <>
+                <span className="truncate text-slate-700">{mergedName}</span>
+                <span>·</span>
+                <span>{formatBytes(mergedSize)}</span>
+                <span>·</span>
+                <span>{formatSeconds(mergedDuration)}</span>
+              </>
+            )}
+            {errorMsg && (
+              <span className="text-rose-600">{errorMsg}</span>
+            )}
+          </div>
         )}
       </div>
     );
   },
 );
 
-function PlayablePreview({
-  videoUrl,
+function ActionButton({
+  onClick,
+  disabled,
+  icon,
+  label,
   testId,
-  emptyText = "Empty",
+  as,
+  href,
+  download,
 }: {
-  videoUrl: string | null;
+  onClick?: () => void;
+  disabled?: boolean;
+  icon: React.ReactNode;
+  label: string;
   testId: string;
-  emptyText?: string;
+  as?: "a";
+  href?: string;
+  download?: string;
 }) {
-  const [playing, setPlaying] = useState(false);
+  const cls = `inline-flex items-center justify-center gap-1 rounded-full border border-slate-400 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 transition hover:border-slate-700 hover:bg-slate-100 ${
+    disabled ? "pointer-events-none opacity-40" : ""
+  }`;
 
-  if (!videoUrl) {
+  if (as === "a") {
     return (
-      <div className="flex aspect-video w-full items-center justify-center rounded border border-slate-800 bg-black text-xs text-slate-600">
-        {emptyText}
-      </div>
-    );
-  }
-
-  if (playing) {
-    return (
-      <video
-        src={videoUrl}
-        controls
-        autoPlay
-        className="aspect-video w-full rounded border border-slate-800 bg-black"
+      <a
+        href={disabled ? undefined : href}
+        download={download}
+        className={cls}
         data-testid={testId}
-      />
+        aria-disabled={disabled}
+      >
+        {icon}
+        {label}
+      </a>
     );
   }
-
   return (
     <button
       type="button"
-      onClick={() => setPlaying(true)}
-      className="group relative flex aspect-video w-full items-center justify-center rounded border border-slate-800 bg-black transition hover:border-slate-600"
-      data-testid={`${testId}-play`}
+      onClick={onClick}
+      disabled={disabled}
+      className={cls}
+      data-testid={testId}
     >
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 backdrop-blur transition group-hover:scale-110 group-hover:bg-white/20">
-        <Play className="ml-0.5 h-5 w-5 fill-white text-white" />
-      </span>
+      {icon}
+      {label}
     </button>
   );
 }
 
-function FlowArrow() {
-  return (
-    <div className="hidden items-center justify-center lg:flex">
-      <div className="relative flex items-center">
-        <div className="h-px w-8 bg-gradient-to-r from-slate-700 to-slate-500" />
-        <ArrowRight className="-ml-1 h-5 w-5 text-slate-400" />
-      </div>
-    </div>
-  );
-}
-
-function UploadCard({
+function UploadBox({
   kind,
   file,
   duration,
@@ -726,32 +679,18 @@ function UploadCard({
   const inputRef = useRef<HTMLInputElement>(null);
   const accent =
     kind === "audio"
-      ? {
-          ring: "border-emerald-500/40 hover:border-emerald-500/70",
-          bg: "bg-emerald-500/5",
-          icon: "text-emerald-400",
-          chip: "bg-emerald-500/15 text-emerald-300",
-        }
-      : {
-          ring: "border-rose-500/40 hover:border-rose-500/70",
-          bg: "bg-rose-500/5",
-          icon: "text-rose-400",
-          chip: "bg-rose-500/15 text-rose-300",
-        };
-
-  const Icon = kind === "audio" ? Music : Video;
-  const FileIcon = kind === "audio" ? FileAudio : FileVideo;
+      ? "border-emerald-500 bg-emerald-50/40 text-emerald-700 hover:bg-emerald-50"
+      : "border-rose-500 bg-rose-50/40 text-rose-700 hover:bg-rose-50";
+  const label = kind === "audio" ? "AUDIO UPLOAD" : "video UPLOAD";
   const accept = kind === "audio" ? "audio/*" : "video/*";
 
   return (
     <div
-      className={`group relative cursor-pointer rounded-xl border-2 border-dashed px-4 py-3 transition-colors ${accent.ring} ${accent.bg} ${
+      className={`group cursor-pointer rounded-md border-2 border-dashed px-3 py-2 transition-colors ${accent} ${
         disabled ? "pointer-events-none opacity-50" : ""
       }`}
       onClick={() => inputRef.current?.click()}
-      onDragOver={(e) => {
-        e.preventDefault();
-      }}
+      onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
         const f = e.dataTransfer.files?.[0];
@@ -767,50 +706,73 @@ function UploadCard({
         onChange={(e) => onChange(e.target.files?.[0] ?? null)}
         data-testid={`input-${kind}${testIdSuffix}`}
       />
-      <div className="flex items-start gap-4">
-        <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700/70 bg-slate-900 ${accent.icon}`}
-        >
-          <Icon className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
-              {kind === "audio" ? "Audio Upload" : "Video Upload"}
-            </h3>
-            {duration !== null && (
-              <span
-                className={`rounded-full px-2 py-0.5 font-mono text-[11px] ${accent.chip}`}
-              >
-                {formatSeconds(duration)}
-              </span>
-            )}
-          </div>
-          {file ? (
-            <div className="mt-2 flex items-center gap-2 text-sm text-slate-300">
-              <FileIcon className="h-4 w-4 text-slate-500" />
-              <span
-                className="truncate"
-                data-testid={`text-${kind}-name${testIdSuffix}`}
-              >
-                {file.name}
-              </span>
-              <span className="text-slate-600">·</span>
-              <span className="text-xs text-slate-500">
-                {formatBytes(file.size)}
-              </span>
-            </div>
-          ) : (
-            <p className="mt-2 text-sm text-slate-400">
-              <span className="inline-flex items-center gap-1.5">
-                <Upload className="h-3.5 w-3.5" />
-                Click or drop a file here
-              </span>
-            </p>
-          )}
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold tracking-wide">{label}</span>
+        {duration !== null && (
+          <span className="rounded-full bg-white/70 px-1.5 font-mono text-[10px]">
+            {formatSeconds(duration)}
+          </span>
+        )}
       </div>
+      {file && (
+        <div
+          className="mt-0.5 truncate text-[10px] text-slate-600"
+          data-testid={`text-${kind}-name${testIdSuffix}`}
+          title={file.name}
+        >
+          {file.name} · {formatBytes(file.size)}
+        </div>
+      )}
     </div>
+  );
+}
+
+function PlayablePreview({
+  videoUrl,
+  playing,
+  setPlaying,
+  testId,
+}: {
+  videoUrl: string | null;
+  playing: boolean;
+  setPlaying: (v: boolean) => void;
+  testId: string;
+}) {
+  if (!videoUrl) {
+    return (
+      <div
+        className="flex h-[88px] w-[120px] items-center justify-center rounded-md border-2 border-slate-400 bg-white text-[10px] text-slate-400"
+        data-testid={`${testId}-empty`}
+      >
+        preview
+      </div>
+    );
+  }
+
+  if (playing) {
+    return (
+      <video
+        src={videoUrl}
+        controls
+        autoPlay
+        className="h-[88px] w-[120px] rounded-md border-2 border-slate-400 bg-black"
+        data-testid={testId}
+        onEnded={() => setPlaying(false)}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setPlaying(true)}
+      className="group relative flex h-[88px] w-[120px] items-center justify-center rounded-md border-2 border-slate-400 bg-black transition hover:border-slate-700"
+      data-testid={`${testId}-play`}
+    >
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 backdrop-blur transition group-hover:scale-110 group-hover:bg-white/30">
+        <Play className="h-3.5 w-3.5 text-white" />
+      </span>
+    </button>
   );
 }
 
