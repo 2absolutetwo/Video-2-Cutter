@@ -136,6 +136,10 @@ function VideoCutter() {
   }, [videoUrl]);
   const [outputName, setOutputName] = useState<string>("");
   const [outputSize, setOutputSize] = useState<number>(0);
+  const [mergedUrl, setMergedUrl] = useState<string | null>(null);
+  const [mergedName, setMergedName] = useState<string>("");
+  const [mergedSize, setMergedSize] = useState<number>(0);
+  const [mergedDuration, setMergedDuration] = useState<number>(0);
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   // Load ffmpeg once
@@ -224,9 +228,14 @@ function VideoCutter() {
 
   const reset = () => {
     if (outputUrl) URL.revokeObjectURL(outputUrl);
+    if (mergedUrl) URL.revokeObjectURL(mergedUrl);
     setOutputUrl(null);
     setOutputName("");
     setOutputSize(0);
+    setMergedUrl(null);
+    setMergedName("");
+    setMergedSize(0);
+    setMergedDuration(0);
     setAudioFile(null);
     setVideoFile(null);
     setAudioDuration(null);
@@ -242,12 +251,17 @@ function VideoCutter() {
     const ffmpeg = ffmpegRef.current;
     setErrorMsg("");
     setProgress(0);
+    if (outputUrl) URL.revokeObjectURL(outputUrl);
+    if (mergedUrl) URL.revokeObjectURL(mergedUrl);
     setOutputUrl(null);
+    setMergedUrl(null);
 
     const ext = (videoFile.name.split(".").pop() || "mp4").toLowerCase();
     const inputName = `input.${ext}`;
     const outputExt = ext === "mov" || ext === "mkv" || ext === "webm" ? ext : "mp4";
     const outputName = `Clip 2.${outputExt}`;
+    const clip1NoAudio = `clip1.${outputExt}`;
+    const mergedFileName = `Merged.${outputExt}`;
 
     try {
       setStage("reading");
@@ -277,13 +291,52 @@ function VideoCutter() {
 
       const out = await ffmpeg.readFile(outputName);
       const outBuf = out as Uint8Array;
-      const blob = new Blob([outBuf.slice().buffer], {
-        type: outputExt === "webm" ? "video/webm" : "video/mp4",
-      });
+      const mimeType = outputExt === "webm" ? "video/webm" : "video/mp4";
+      const blob = new Blob([outBuf.slice().buffer], { type: mimeType });
       const url = URL.createObjectURL(blob);
       setOutputUrl(url);
       setOutputName(outputName);
       setOutputSize(blob.size);
+
+      // Now build merged video: clip1 (without audio) + clip2, lossless concat.
+      await ffmpeg.exec([
+        "-i",
+        inputName,
+        "-c",
+        "copy",
+        "-an",
+        clip1NoAudio,
+      ]);
+
+      const concatList = `file '${clip1NoAudio}'\nfile '${outputName}'\n`;
+      await ffmpeg.writeFile(
+        "concat.txt",
+        new TextEncoder().encode(concatList),
+      );
+
+      await ffmpeg.exec([
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        "concat.txt",
+        "-c",
+        "copy",
+        mergedFileName,
+      ]);
+
+      const mergedData = await ffmpeg.readFile(mergedFileName);
+      const mergedBuf = mergedData as Uint8Array;
+      const mergedBlob = new Blob([mergedBuf.slice().buffer], {
+        type: mimeType,
+      });
+      const mUrl = URL.createObjectURL(mergedBlob);
+      setMergedUrl(mUrl);
+      setMergedName(mergedFileName);
+      setMergedSize(mergedBlob.size);
+      setMergedDuration((videoDuration as number) + cutTime);
+
       setStage("done");
       setProgress(100);
 
@@ -291,6 +344,9 @@ function VideoCutter() {
       try {
         await ffmpeg.deleteFile(inputName);
         await ffmpeg.deleteFile(outputName);
+        await ffmpeg.deleteFile(clip1NoAudio);
+        await ffmpeg.deleteFile(mergedFileName);
+        await ffmpeg.deleteFile("concat.txt");
       } catch {
         /* ignore */
       }
@@ -489,6 +545,46 @@ function VideoCutter() {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Merged video */}
+        {mergedUrl && (
+          <Card className="mt-6 border-purple-500/30 bg-purple-500/5">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 text-sm font-medium text-purple-300">
+                <Sparkles className="h-4 w-4" />
+                Merged Video — Clip 1 + Clip 2
+              </div>
+              <div className="mt-4 overflow-hidden rounded-lg border border-slate-800 bg-black">
+                <video
+                  src={mergedUrl}
+                  controls
+                  className="h-auto w-full"
+                  data-testid="video-merged"
+                />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-x-2 text-sm text-slate-400">
+                <span className="text-slate-200">{mergedName}</span>
+                <span className="text-slate-600">·</span>
+                <span>{formatBytes(mergedSize)}</span>
+                <span className="text-slate-600">·</span>
+                <span>{formatSeconds(mergedDuration)}</span>
+              </div>
+              <a
+                href={mergedUrl}
+                download={mergedName}
+                className="mt-3 inline-block"
+              >
+                <Button
+                  className="bg-purple-500 text-white hover:bg-purple-400"
+                  data-testid="button-download-merged"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Merged
+                </Button>
+              </a>
             </CardContent>
           </Card>
         )}
