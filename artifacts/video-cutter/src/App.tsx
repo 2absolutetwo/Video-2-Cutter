@@ -325,13 +325,27 @@ function VideoCutterApp() {
           </div>
         </div>
 
-        {/* Media Pool */}
-        <MediaPool
-          items={pool}
-          onAdd={addPoolFiles}
-          onRemove={removePoolItem}
-          onClear={clearPool}
-        />
+        {/* Media Pools - separate audio + video */}
+        <div className="mb-6 grid gap-4 md:grid-cols-2">
+          <MediaPool
+            kind="audio"
+            items={pool.filter((p) => p.kind === "audio")}
+            onAdd={addPoolFiles}
+            onRemove={removePoolItem}
+            onClear={() =>
+              setPool((p) => p.filter((x) => x.kind !== "audio"))
+            }
+          />
+          <MediaPool
+            kind="video"
+            items={pool.filter((p) => p.kind === "video")}
+            onAdd={addPoolFiles}
+            onRemove={removePoolItem}
+            onClear={() =>
+              setPool((p) => p.filter((x) => x.kind !== "video"))
+            }
+          />
+        </div>
 
         {/* 2-column grid of cards */}
         <div className="grid gap-5 md:grid-cols-2">
@@ -377,11 +391,13 @@ function VideoCutterApp() {
 }
 
 function MediaPool({
+  kind,
   items,
   onAdd,
   onRemove,
   onClear,
 }: {
+  kind: "audio" | "video";
   items: PoolItem[];
   onAdd: (files: FileList | File[]) => void;
   onRemove: (id: string) => void;
@@ -389,21 +405,38 @@ function MediaPool({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const isAudio = kind === "audio";
+  const accept = isAudio ? "audio/*" : "video/*";
+  const title = isAudio ? "AUDIO POOL" : "VIDEO POOL";
+  const subtitle = isAudio
+    ? "Drop audio files here, then drag onto a card's audio slot"
+    : "Drop video files here, then drag onto a card's video slot";
+  const headerGradient = isAudio
+    ? "from-emerald-500 to-teal-500"
+    : "from-rose-500 to-pink-500";
+  const Icon = isAudio ? Music : Film;
+
+  const handleAdd = (files: FileList | File[]) => {
+    const arr = Array.from(files).filter((f) =>
+      isAudio ? f.type.startsWith("audio/") : f.type.startsWith("video/"),
+    );
+    if (arr.length) onAdd(arr);
+  };
 
   return (
-    <div className="mb-6 rounded-2xl border-2 border-slate-300 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border-2 border-slate-300 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 text-white shadow-md">
-            <FolderOpen className="h-4 w-4" strokeWidth={2.25} />
+          <span
+            className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${headerGradient} text-white shadow-md`}
+          >
+            <Icon className="h-4 w-4" strokeWidth={2.25} />
           </span>
           <div>
             <h2 className="text-sm font-bold tracking-wide text-slate-800">
-              MEDIA POOL
+              {title}
             </h2>
-            <p className="text-[11px] text-slate-500">
-              Drop many audio / video files here, then drag them onto a card slot
-            </p>
+            <p className="text-[11px] text-slate-500">{subtitle}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -432,11 +465,11 @@ function MediaPool({
             ref={inputRef}
             type="file"
             multiple
-            accept="audio/*,video/*"
+            accept={accept}
             className="hidden"
-            data-testid="input-pool-files"
+            data-testid={`input-pool-${kind}-files`}
             onChange={(e) => {
-              if (e.target.files) onAdd(e.target.files);
+              if (e.target.files) handleAdd(e.target.files);
               e.target.value = "";
             }}
           />
@@ -452,7 +485,7 @@ function MediaPool({
         onDrop={(e) => {
           e.preventDefault();
           setDragOver(false);
-          if (e.dataTransfer.files?.length) onAdd(e.dataTransfer.files);
+          if (e.dataTransfer.files?.length) handleAdd(e.dataTransfer.files);
         }}
         className={`rounded-xl border-2 border-dashed p-3 transition ${
           dragOver
@@ -464,10 +497,10 @@ function MediaPool({
         {items.length === 0 ? (
           <div className="py-6 text-center text-[12px] text-slate-400">
             <UploadCloud className="mx-auto mb-1 h-5 w-5" />
-            Drop audio or video files here, or click "Add files"
+            Drop {kind} files here, or click "Add files"
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {items.map((item) => (
               <PoolItemCard
                 key={item.id}
