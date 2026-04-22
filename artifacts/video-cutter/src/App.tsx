@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 const FFMPEG_BASE_URL =
-  "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd";
+  "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
 
 function formatSeconds(s: number): string {
   if (!isFinite(s) || s < 0) return "0.00s";
