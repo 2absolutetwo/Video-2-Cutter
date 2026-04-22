@@ -393,178 +393,133 @@ function VideoCutter() {
           )}
         </div>
 
-        {/* Upload grid */}
-        <div className="grid gap-5 md:grid-cols-2">
-          <UploadCard
-            kind="audio"
-            file={audioFile}
-            duration={audioDuration}
-            onChange={handleAudio}
-            disabled={isWorking}
-          />
-          <UploadCard
-            kind="video"
-            file={videoFile}
-            duration={videoDuration}
-            onChange={handleVideo}
-            disabled={isWorking}
-          />
+        {/* Diagram-style layout: uploads | auto-cut | clips */}
+        <div className="grid items-center gap-6 md:grid-cols-[1fr_auto_1fr]">
+          {/* Left column: stacked uploads */}
+          <div className="flex flex-col gap-5">
+            <UploadCard
+              kind="audio"
+              file={audioFile}
+              duration={audioDuration}
+              onChange={handleAudio}
+              disabled={isWorking}
+            />
+            <UploadCard
+              kind="video"
+              file={videoFile}
+              duration={videoDuration}
+              onChange={handleVideo}
+              disabled={isWorking}
+            />
+          </div>
+
+          {/* Middle column: AUTO CUT button */}
+          <div className="flex flex-col items-center justify-center gap-3">
+            <button
+              onClick={handleCut}
+              disabled={!canCut}
+              data-testid="button-cut"
+              className="rounded-md border-2 border-cyan-400 bg-cyan-500/5 px-8 py-4 text-base font-semibold tracking-wide text-cyan-200 transition hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {isWorking ? (
+                <span className="inline-flex items-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {stage === "reading" ? "READING..." : "CUTTING..."}
+                </span>
+              ) : (
+                <span className="inline-flex items-center">
+                  <Scissors className="mr-2 h-4 w-4" />
+                  AUTO CUT
+                </span>
+              )}
+            </button>
+            {(audioFile || videoFile || outputUrl) && !isWorking && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={reset}
+                className="text-slate-300 hover:text-white"
+                data-testid="button-reset"
+              >
+                <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                Reset
+              </Button>
+            )}
+          </div>
+
+          {/* Right column: stacked clip boxes */}
+          <div className="flex flex-col gap-5">
+            <ClipBox
+              label="CLIP 1"
+              testId="video-main"
+              videoUrl={videoUrl}
+              fileName={videoFile?.name}
+              fileSize={videoFile?.size ?? null}
+              duration={videoDuration}
+              downloadUrl={videoUrl}
+              downloadName={videoFile?.name}
+            />
+            <ClipBox
+              label="CLIP 2"
+              testId="video-output"
+              videoUrl={outputUrl}
+              fileName={outputName || null}
+              fileSize={outputSize || null}
+              duration={cutTime}
+              downloadUrl={outputUrl}
+              downloadName={outputName}
+            />
+          </div>
         </div>
 
-        {/* Calculation panel */}
-        <Card className="mt-6 border-slate-800 bg-slate-900/60 backdrop-blur">
-          <CardContent className="p-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                size="lg"
-                onClick={handleCut}
-                disabled={!canCut}
-                className="bg-indigo-500 text-white hover:bg-indigo-400 disabled:opacity-40"
-                data-testid="button-cut"
-              >
-                {isWorking ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {stage === "reading" ? "Reading video..." : "Cutting..."}
-                  </>
-                ) : (
-                  <>
-                    <Scissors className="mr-2 h-4 w-4" />
-                    Auto Cut
-                  </>
-                )}
-              </Button>
-              {(audioFile || videoFile || outputUrl) && !isWorking && (
-                <Button
-                  size="lg"
-                  variant="ghost"
-                  onClick={reset}
-                  className="text-slate-300 hover:text-white"
-                  data-testid="button-reset"
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Reset
-                </Button>
-              )}
-            </div>
-
-            {isWorking && (
-              <div className="mt-5">
-                <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                  <div
-                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-200"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <div className="mt-2 text-right text-xs text-slate-400">
-                  {progress}%
-                </div>
-              </div>
-            )}
-
-            {errorMsg && (
-              <div className="mt-4 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-                {errorMsg}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Output */}
-        {outputUrl && (
-          <Card className="mt-6 border-emerald-500/30 bg-emerald-500/5">
+        {/* Progress + error (kept under main grid) */}
+        {(isWorking || errorMsg) && (
+          <Card className="mt-6 border-slate-800 bg-slate-900/60 backdrop-blur">
             <CardContent className="p-6">
-              <div className="flex items-center gap-2 text-sm font-medium text-emerald-300">
-                <CheckCircle2 className="h-4 w-4" />
-                Output Video Ready
-              </div>
-              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              {isWorking && (
                 <div>
-                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-emerald-300">
-                    Clip 2 (Cut)
-                  </div>
-                  <div className="overflow-hidden rounded-lg border border-slate-800 bg-black">
-                    <video
-                      src={outputUrl}
-                      controls
-                      className="h-auto w-full"
-                      data-testid="video-output"
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-200"
+                      style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <div className="mt-3 text-sm text-slate-400">
-                    <span className="text-slate-200">{outputName}</span>
-                    <span className="mx-2 text-slate-600">·</span>
-                    {formatBytes(outputSize)}
-                    <span className="mx-2 text-slate-600">·</span>
-                    {formatSeconds(cutTime ?? 0)}
+                  <div className="mt-2 text-right text-xs text-slate-400">
+                    {progress}%
                   </div>
-                  <a
-                    href={outputUrl}
-                    download={outputName}
-                    className="mt-3 inline-block"
-                  >
-                    <Button
-                      className="bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                      data-testid="button-download"
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Clip
-                    </Button>
-                  </a>
                 </div>
-                {videoUrl && (
-                  <div>
-                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-indigo-300">
-                      Clip 1 (Main)
-                    </div>
-                    <div className="overflow-hidden rounded-lg border border-slate-800 bg-black">
-                      <video
-                        src={videoUrl}
-                        controls
-                        className="h-auto w-full"
-                        data-testid="video-main"
-                      />
-                    </div>
-                    <div className="mt-3 text-sm text-slate-400">
-                      <span className="text-slate-200">
-                        {videoFile?.name}
-                      </span>
-                      {videoFile && (
-                        <>
-                          <span className="mx-2 text-slate-600">·</span>
-                          {formatBytes(videoFile.size)}
-                        </>
-                      )}
-                      {videoDuration !== null && (
-                        <>
-                          <span className="mx-2 text-slate-600">·</span>
-                          {formatSeconds(videoDuration)}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
+              {errorMsg && (
+                <div className="mt-4 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                  {errorMsg}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* Merged video */}
-        {mergedUrl && (
-          <Card className="mt-6 border-purple-500/30 bg-purple-500/5">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-2 text-sm font-medium text-purple-300">
-                <Sparkles className="h-4 w-4" />
-                Merged Video — Clip 1 + Clip 2
+        {/* Merged video — wide rectangle below */}
+        <div className="mt-8 rounded-lg border-2 border-indigo-400/70 bg-slate-900/40 p-5">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
+            <Sparkles className="h-4 w-4 text-purple-300" />
+            Merged Video — Clip 1 + Clip 2
+          </div>
+          <div className="mt-4 overflow-hidden rounded-md border border-slate-800 bg-black">
+            {mergedUrl ? (
+              <video
+                src={mergedUrl}
+                controls
+                className="h-auto w-full"
+                data-testid="video-merged"
+              />
+            ) : (
+              <div className="flex aspect-video w-full items-center justify-center text-xs text-slate-600">
+                Merged result will appear here after Auto Cut
               </div>
-              <div className="mt-4 overflow-hidden rounded-lg border border-slate-800 bg-black">
-                <video
-                  src={mergedUrl}
-                  controls
-                  className="h-auto w-full"
-                  data-testid="video-merged"
-                />
-              </div>
+            )}
+          </div>
+          {mergedUrl && (
+            <>
               <div className="mt-3 flex flex-wrap items-center gap-x-2 text-sm text-slate-400">
                 <span className="text-slate-200">{mergedName}</span>
                 <span className="text-slate-600">·</span>
@@ -585,9 +540,9 @@ function VideoCutter() {
                   Download Merged
                 </Button>
               </a>
-            </CardContent>
-          </Card>
-        )}
+            </>
+          )}
+        </div>
 
         {/* Footer */}
         <div className="mt-12 text-center text-xs text-slate-500">
@@ -624,6 +579,75 @@ function Stat({
       </div>
       <div className="mt-1 font-mono text-lg font-semibold">{value}</div>
       {hint && <div className="mt-1 text-[10px] opacity-60">{hint}</div>}
+    </div>
+  );
+}
+
+function ClipBox({
+  label,
+  testId,
+  videoUrl,
+  fileName,
+  fileSize,
+  duration,
+  downloadUrl,
+  downloadName,
+}: {
+  label: string;
+  testId: string;
+  videoUrl: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+  duration?: number | null;
+  downloadUrl?: string | null;
+  downloadName?: string;
+}) {
+  return (
+    <div className="rounded-md border-2 border-slate-300/80 bg-slate-900/40 p-3">
+      <div className="mb-2 text-sm font-semibold tracking-wide text-slate-100">
+        {label}
+      </div>
+      <div className="overflow-hidden rounded border border-slate-800 bg-black">
+        {videoUrl ? (
+          <video
+            src={videoUrl}
+            controls
+            className="h-auto w-full"
+            data-testid={testId}
+          />
+        ) : (
+          <div className="flex aspect-video w-full items-center justify-center text-xs text-slate-600">
+            Empty
+          </div>
+        )}
+      </div>
+      {videoUrl && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
+          {fileName && <span className="truncate text-slate-300">{fileName}</span>}
+          {fileSize ? (
+            <>
+              <span className="text-slate-600">·</span>
+              <span>{formatBytes(fileSize)}</span>
+            </>
+          ) : null}
+          {duration !== null && duration !== undefined ? (
+            <>
+              <span className="text-slate-600">·</span>
+              <span>{formatSeconds(duration)}</span>
+            </>
+          ) : null}
+          {downloadUrl && downloadName && (
+            <a
+              href={downloadUrl}
+              download={downloadName}
+              className="ml-auto inline-flex items-center gap-1 text-indigo-300 hover:text-indigo-200"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 }
