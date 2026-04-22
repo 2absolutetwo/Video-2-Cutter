@@ -423,7 +423,7 @@ function VideoCutter() {
               onClick={handleCut}
               disabled={!canCut}
               data-testid="button-cut"
-              className="group relative w-full rounded-lg border-2 border-cyan-400 bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 px-6 py-5 text-base font-semibold tracking-widest text-cyan-200 shadow-[0_0_30px_-10px_rgba(34,211,238,0.6)] transition hover:from-cyan-400/20 hover:to-cyan-500/10 hover:shadow-[0_0_40px_-8px_rgba(34,211,238,0.8)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+              className="group relative rounded-lg border-2 border-cyan-400 bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 px-4 py-2.5 text-sm font-semibold tracking-widest text-cyan-200 shadow-[0_0_30px_-10px_rgba(34,211,238,0.6)] transition hover:from-cyan-400/20 hover:to-cyan-500/10 hover:shadow-[0_0_40px_-8px_rgba(34,211,238,0.8)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
             >
               {isWorking ? (
                 <span className="inline-flex items-center">
@@ -717,7 +717,7 @@ function UploadCard({
 
   return (
     <div
-      className={`group relative cursor-pointer rounded-xl border-2 border-dashed p-6 transition-colors ${accent.ring} ${accent.bg} ${
+      className={`group relative cursor-pointer rounded-xl border-2 border-dashed px-4 py-3 transition-colors ${accent.ring} ${accent.bg} ${
         disabled ? "pointer-events-none opacity-50" : ""
       }`}
       onClick={() => inputRef.current?.click()}
@@ -741,9 +741,9 @@ function UploadCard({
       />
       <div className="flex items-start gap-4">
         <div
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-slate-700/70 bg-slate-900 ${accent.icon}`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700/70 bg-slate-900 ${accent.icon}`}
         >
-          <Icon className="h-6 w-6" />
+          <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
