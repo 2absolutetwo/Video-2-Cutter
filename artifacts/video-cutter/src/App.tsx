@@ -238,7 +238,7 @@ function VideoCutter() {
     const ext = (videoFile.name.split(".").pop() || "mp4").toLowerCase();
     const inputName = `input.${ext}`;
     const outputExt = ext === "mov" || ext === "mkv" || ext === "webm" ? ext : "mp4";
-    const outputName = `cut_clip.${outputExt}`;
+    const outputName = `Clip 2.${outputExt}`;
 
     try {
       setStage("reading");
