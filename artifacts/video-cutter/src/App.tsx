@@ -21,10 +21,11 @@ import {
   Music,
   Film,
   UploadCloud,
+  Plus,
 } from "lucide-react";
 
 const FFMPEG_BASE_URL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
-const NUM_CARDS = 6;
+const INITIAL_CARDS = 6;
 
 function formatSeconds(s: number): string {
   if (!isFinite(s) || s < 0) return "0.00s";
@@ -160,16 +161,29 @@ function VideoCutterApp() {
     progressCbRef.current = cb;
   };
 
+  const [numCards, setNumCards] = useState(INITIAL_CARDS);
   const cardRefs = useRef<(CutterCardHandle | null)[]>(
-    Array(NUM_CARDS).fill(null),
+    Array(INITIAL_CARDS).fill(null),
   );
   const [cardStates, setCardStates] = useState<CardState[]>(
-    Array.from({ length: NUM_CARDS }, () => ({
+    Array.from({ length: INITIAL_CARDS }, () => ({
       canCut: false,
       isWorking: false,
     })),
   );
   const [running, setRunning] = useState(false);
+
+  const addCard = () => {
+    setNumCards((n) => {
+      const next = n + 1;
+      cardRefs.current.length = next;
+      return next;
+    });
+    setCardStates((prev) => [
+      ...prev,
+      { canCut: false, isWorking: false },
+    ]);
+  };
 
   const setCardState = (idx: number) => (s: CardState) => {
     setCardStates((prev) => {
@@ -190,8 +204,8 @@ function VideoCutterApp() {
     if (!globalCanCut) return;
     setRunning(true);
     try {
-      for (let i = 0; i < NUM_CARDS; i++) {
-        if (cardStates[i].canCut && cardRefs.current[i]) {
+      for (let i = 0; i < numCards; i++) {
+        if (cardStates[i]?.canCut && cardRefs.current[i]) {
           await cardRefs.current[i]!.runCut();
         }
       }
@@ -245,9 +259,9 @@ function VideoCutterApp() {
           </div>
         </div>
 
-        {/* 2-column grid of 6 cards */}
+        {/* 2-column grid of cards */}
         <div className="grid gap-5 md:grid-cols-2">
-          {Array.from({ length: NUM_CARDS }, (_, i) => (
+          {Array.from({ length: numCards }, (_, i) => (
             <CutterCard
               key={i}
               ref={(el) => {
@@ -258,9 +272,25 @@ function VideoCutterApp() {
               engineReady={ffmpegReady}
               setProgressCb={setProgressCb}
               onStateChange={setCardState(i)}
-              highlight={cardStates[i].isWorking}
+              highlight={cardStates[i]?.isWorking}
             />
           ))}
+          <button
+            type="button"
+            onClick={addCard}
+            data-testid="button-add-card"
+            className="group flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-white/60 p-4 text-slate-500 transition hover:-translate-y-0.5 hover:border-indigo-400 hover:bg-indigo-50/50 hover:text-indigo-600 hover:shadow-md"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-slate-300 transition group-hover:border-indigo-400 group-hover:bg-white">
+              <Plus className="h-5 w-5" />
+            </span>
+            <span className="text-sm font-semibold tracking-wide">
+              Add card
+            </span>
+            <span className="text-[11px] text-slate-400">
+              Create another clip slot
+            </span>
+          </button>
         </div>
 
         <div className="mt-10 text-center text-xs text-slate-500">
