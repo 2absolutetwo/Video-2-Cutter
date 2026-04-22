@@ -733,9 +733,11 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
       !!audioFile &&
       !!videoFile &&
       cutTime !== null &&
-      cutTime > 0 &&
+      cutTime !== 0 &&
       videoDuration !== null &&
-      cutTime < videoDuration &&
+      audioDuration !== null &&
+      audioDuration > 0 &&
+      Math.abs(cutTime) < videoDuration &&
       !isWorking;
 
     useEffect(() => {
@@ -789,55 +791,71 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
         const data = await fetchFile(videoFile);
         await ffmpeg.writeFile(inputName, data);
 
-        const startSec = (videoDuration as number) - cutTime;
-
-        setStage("cutting");
-        await ffmpeg.exec([
-          "-ss",
-          startSec.toFixed(3),
-          "-i",
-          inputName,
-          "-c",
-          "copy",
-          "-an",
-          "-avoid_negative_ts",
-          "make_zero",
-          outFile,
-        ]);
-
-        const out = await ffmpeg.readFile(outFile);
-        const outBuf = out as Uint8Array;
         const mimeType = outputExt === "webm" ? "video/webm" : "video/mp4";
-        const blob = new Blob([outBuf.slice().buffer], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        setOutputUrl(url);
+        setStage("cutting");
 
-        await ffmpeg.exec([
-          "-i",
-          inputName,
-          "-c",
-          "copy",
-          "-an",
-          clip1NoAudio,
-        ]);
+        if (cutTime > 0) {
+          // Audio longer than video: extend video by repeating its tail
+          const startSec = (videoDuration as number) - cutTime;
 
-        const concatList = `file '${clip1NoAudio}'\nfile '${outFile}'\n`;
-        await ffmpeg.writeFile(
-          concatFile,
-          new TextEncoder().encode(concatList),
-        );
+          await ffmpeg.exec([
+            "-ss",
+            startSec.toFixed(3),
+            "-i",
+            inputName,
+            "-c",
+            "copy",
+            "-an",
+            "-avoid_negative_ts",
+            "make_zero",
+            outFile,
+          ]);
 
-        await ffmpeg.exec([
-          "-f",
-          "concat",
-          "-safe",
-          "0",
-          "-i",
-          concatFile,
-          "-c",
-          "copy",
-          mergedFile,
-        ]);
+          const out = await ffmpeg.readFile(outFile);
+          const outBuf = out as Uint8Array;
+          const blob = new Blob([outBuf.slice().buffer], { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          setOutputUrl(url);
+
+          await ffmpeg.exec([
+            "-i",
+            inputName,
+            "-c",
+            "copy",
+            "-an",
+            clip1NoAudio,
+          ]);
+
+          const concatList = `file '${clip1NoAudio}'\nfile '${outFile}'\n`;
+          await ffmpeg.writeFile(
+            concatFile,
+            new TextEncoder().encode(concatList),
+          );
+
+          await ffmpeg.exec([
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            concatFile,
+            "-c",
+            "copy",
+            mergedFile,
+          ]);
+        } else {
+          // Audio shorter than video: trim video to match audio duration
+          await ffmpeg.exec([
+            "-i",
+            inputName,
+            "-t",
+            (audioDuration as number).toFixed(3),
+            "-c",
+            "copy",
+            "-an",
+            mergedFile,
+          ]);
+        }
 
         const mergedData = await ffmpeg.readFile(mergedFile);
         const mergedBuf = mergedData as Uint8Array;
@@ -848,17 +866,19 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
         setMergedUrl(mUrl);
         setMergedName(mergedFileName);
         setMergedSize(mergedBlob.size);
-        setMergedDuration((videoDuration as number) + cutTime);
+        setMergedDuration(audioDuration as number);
 
         setStage("done");
         setProgress(100);
 
         try {
           await ffmpeg.deleteFile(inputName);
-          await ffmpeg.deleteFile(outFile);
-          await ffmpeg.deleteFile(clip1NoAudio);
+          if (cutTime > 0) {
+            await ffmpeg.deleteFile(outFile);
+            await ffmpeg.deleteFile(clip1NoAudio);
+            await ffmpeg.deleteFile(concatFile);
+          }
           await ffmpeg.deleteFile(mergedFile);
-          await ffmpeg.deleteFile(concatFile);
         } catch {
           /* ignore */
         }
