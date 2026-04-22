@@ -891,16 +891,6 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
     }));
 
     const videoSwapRef = useRef<HTMLInputElement | null>(null);
-    const [swapChecked, setSwapChecked] = useState(false);
-
-    useEffect(() => {
-      if (!videoTooLong) setSwapChecked(false);
-    }, [videoTooLong]);
-
-    const handleSwapToggle = (checked: boolean) => {
-      setSwapChecked(checked);
-      if (checked) videoSwapRef.current?.click();
-    };
 
     return (
       <div
@@ -1005,25 +995,10 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
         {(isWorking || errorMsg || videoTooLong || (cutTime !== null && cutTime > 0) || mergedUrl) && (
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
             {videoTooLong && !mergedUrl && (
-              <>
-                <span className="inline-flex items-center gap-1.5 rounded border border-rose-400 bg-rose-100 px-2 py-0.5 font-semibold text-rose-700">
-                  <AlertTriangle className="h-3 w-3" />
-                  Video longer than audio (+{formatSeconds(Math.abs(cutTime ?? 0))}) — change video
-                </span>
-                <label
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-rose-300 bg-white px-2 py-0.5 text-rose-700 hover:bg-rose-50"
-                  data-testid={`label-swap-video-${index}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={swapChecked}
-                    onChange={(e) => handleSwapToggle(e.target.checked)}
-                    className="h-3 w-3 accent-rose-600"
-                    data-testid={`checkbox-swap-video-${index}`}
-                  />
-                  <span className="font-semibold">change video</span>
-                </label>
-              </>
+              <span className="inline-flex items-center gap-1.5 rounded border border-rose-400 bg-rose-100 px-2 py-0.5 font-semibold text-rose-700">
+                <AlertTriangle className="h-3 w-3" />
+                Video longer than audio (+{formatSeconds(Math.abs(cutTime ?? 0))})
+              </span>
             )}
             {cutTime !== null && cutTime > 0 && !mergedUrl && (
               <span className="rounded border border-cyan-300 bg-cyan-50 px-2 py-0.5 font-mono text-cyan-700">
