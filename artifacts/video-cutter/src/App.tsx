@@ -814,7 +814,7 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
           {/* Number circle */}
           <div className="flex shrink-0 items-center justify-center">
             <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-slate-400 font-mono text-sm font-bold text-slate-700">
-              {index}
+              {String(index).padStart(3, "0")}
             </div>
           </div>
 
