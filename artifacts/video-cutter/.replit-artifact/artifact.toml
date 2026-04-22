@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Video Clip Cutter"
+version = "1.0.0"
+id = "artifacts/video-cutter"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19858
+
+[services.development]
+run = "pnpm --filter @workspace/video-cutter run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/video-cutter", "run", "build" ]
+publicDir = "artifacts/video-cutter/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19858"
+BASE_PATH = "/"
