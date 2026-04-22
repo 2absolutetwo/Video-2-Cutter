@@ -501,7 +501,7 @@ function VideoCutterApp() {
         {/* Info card - pool & action summary */}
         <div className="mb-6 rounded-2xl border-2 border-slate-200 bg-white px-3 py-2 shadow-sm">
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-2.5 py-1">
+            <div className={`flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-2.5 py-1 transition-opacity ${audioPoolCount === 0 ? "opacity-40" : ""}`}>
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500 text-white">
                 <Music className="h-3 w-3" />
               </span>
@@ -512,7 +512,7 @@ function VideoCutterApp() {
                 {audioPoolCount} <span className="text-[10px] font-medium text-slate-500">files</span>
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-pink-200 bg-pink-50/60 px-2.5 py-1">
+            <div className={`flex items-center gap-2 rounded-lg border border-pink-200 bg-pink-50/60 px-2.5 py-1 transition-opacity ${videoPoolCount === 0 ? "opacity-40" : ""}`}>
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-pink-500 text-white">
                 <Film className="h-3 w-3" />
               </span>
@@ -523,7 +523,7 @@ function VideoCutterApp() {
                 {videoPoolCount} <span className="text-[10px] font-medium text-slate-500">files</span>
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1">
+            <div className={`flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 transition-opacity ${autoCutCount === 0 ? "opacity-40" : ""}`}>
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-700 text-white">
                 <Scissors className="h-3 w-3" />
               </span>
@@ -534,7 +534,7 @@ function VideoCutterApp() {
                 {autoCutCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-2.5 py-1">
+            <div className={`flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-2.5 py-1 transition-opacity ${bothEndsCount === 0 ? "opacity-40" : ""}`}>
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500 text-white">
                 <Crop className="h-3 w-3" />
               </span>
@@ -545,7 +545,7 @@ function VideoCutterApp() {
                 {bothEndsCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50/60 px-2.5 py-1">
+            <div className={`flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50/60 px-2.5 py-1 transition-opacity ${activeCount === 0 ? "opacity-40" : ""}`}>
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-500 text-white">
                 <Activity className="h-3 w-3" />
               </span>
@@ -556,7 +556,7 @@ function VideoCutterApp() {
                 {activeCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50/60 px-2.5 py-1">
+            <div className={`flex items-center gap-2 rounded-lg border border-green-200 bg-green-50/60 px-2.5 py-1 transition-opacity ${completeCount === 0 ? "opacity-40" : ""}`}>
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-green-600 text-white">
                 <CheckCheck className="h-3 w-3" />
               </span>
@@ -567,7 +567,7 @@ function VideoCutterApp() {
                 {completeCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50/60 px-2.5 py-1">
+            <div className={`flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50/60 px-2.5 py-1 transition-opacity ${errorCount === 0 ? "opacity-40" : ""}`}>
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-rose-500 text-white">
                 <AlertCircle className="h-3 w-3" />
               </span>
@@ -578,7 +578,7 @@ function VideoCutterApp() {
                 {errorCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50/60 px-2.5 py-1">
+            <div className={`flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50/60 px-2.5 py-1 transition-opacity ${downloadCount === 0 ? "opacity-40" : ""}`}>
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-500 text-white">
                 <Download className="h-3 w-3" />
               </span>
