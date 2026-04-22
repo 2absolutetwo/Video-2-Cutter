@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import { Toaster } from "@/components/ui/toaster";
@@ -125,6 +125,15 @@ function VideoCutter() {
   const [stage, setStage] = useState<Stage>("idle");
   const [progress, setProgress] = useState(0);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
+  const videoUrl = useMemo(
+    () => (videoFile ? URL.createObjectURL(videoFile) : null),
+    [videoFile],
+  );
+  useEffect(() => {
+    return () => {
+      if (videoUrl) URL.revokeObjectURL(videoUrl);
+    };
+  }, [videoUrl]);
   const [outputName, setOutputName] = useState<string>("");
   const [outputSize, setOutputSize] = useState<number>(0);
   const [errorMsg, setErrorMsg] = useState<string>("");
@@ -463,31 +472,72 @@ function VideoCutter() {
                 <CheckCircle2 className="h-4 w-4" />
                 Output Video Ready
               </div>
-              <div className="mt-4 w-1/4 overflow-hidden rounded-lg border border-slate-800 bg-black">
-                <video
-                  src={outputUrl}
-                  controls
-                  className="h-auto w-full"
-                  data-testid="video-output"
-                />
-              </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="text-sm text-slate-400">
-                  <span className="text-slate-200">{outputName}</span>
-                  <span className="mx-2 text-slate-600">·</span>
-                  {formatBytes(outputSize)}
-                  <span className="mx-2 text-slate-600">·</span>
-                  {formatSeconds(cutTime ?? 0)}
-                </div>
-                <a href={outputUrl} download={outputName}>
-                  <Button
-                    className="bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                    data-testid="button-download"
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-emerald-300">
+                    Clip 2 (Cut)
+                  </div>
+                  <div className="overflow-hidden rounded-lg border border-slate-800 bg-black">
+                    <video
+                      src={outputUrl}
+                      controls
+                      className="h-auto w-full"
+                      data-testid="video-output"
+                    />
+                  </div>
+                  <div className="mt-3 text-sm text-slate-400">
+                    <span className="text-slate-200">{outputName}</span>
+                    <span className="mx-2 text-slate-600">·</span>
+                    {formatBytes(outputSize)}
+                    <span className="mx-2 text-slate-600">·</span>
+                    {formatSeconds(cutTime ?? 0)}
+                  </div>
+                  <a
+                    href={outputUrl}
+                    download={outputName}
+                    className="mt-3 inline-block"
                   >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Clip
-                  </Button>
-                </a>
+                    <Button
+                      className="bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                      data-testid="button-download"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Clip
+                    </Button>
+                  </a>
+                </div>
+                {videoUrl && (
+                  <div>
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-indigo-300">
+                      Clip 1 (Main)
+                    </div>
+                    <div className="overflow-hidden rounded-lg border border-slate-800 bg-black">
+                      <video
+                        src={videoUrl}
+                        controls
+                        className="h-auto w-full"
+                        data-testid="video-main"
+                      />
+                    </div>
+                    <div className="mt-3 text-sm text-slate-400">
+                      <span className="text-slate-200">
+                        {videoFile?.name}
+                      </span>
+                      {videoFile && (
+                        <>
+                          <span className="mx-2 text-slate-600">·</span>
+                          {formatBytes(videoFile.size)}
+                        </>
+                      )}
+                      {videoDuration !== null && (
+                        <>
+                          <span className="mx-2 text-slate-600">·</span>
+                          {formatSeconds(videoDuration)}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
