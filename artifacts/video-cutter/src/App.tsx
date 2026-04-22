@@ -472,59 +472,51 @@ function VideoCutterApp() {
         </div>
 
         {/* Info card - pool & action summary */}
-        <div className="mb-6 rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 shadow-sm">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500 text-white">
-                <Music className="h-4 w-4" />
+        <div className="mb-6 rounded-2xl border-2 border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-2.5 py-1">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500 text-white">
+                <Music className="h-3 w-3" />
               </span>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
-                  Audio Pool
-                </span>
-                <span className="text-lg font-bold text-slate-800" data-testid="info-audio-count">
-                  {audioPoolCount} <span className="text-xs font-medium text-slate-500">files</span>
-                </span>
-              </div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+                Audio Pool
+              </span>
+              <span className="ml-auto text-sm font-bold text-slate-800" data-testid="info-audio-count">
+                {audioPoolCount} <span className="text-[10px] font-medium text-slate-500">files</span>
+              </span>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-pink-200 bg-pink-50/60 px-4 py-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-pink-500 text-white">
-                <Film className="h-4 w-4" />
+            <div className="flex items-center gap-2 rounded-lg border border-pink-200 bg-pink-50/60 px-2.5 py-1">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-pink-500 text-white">
+                <Film className="h-3 w-3" />
               </span>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-pink-700">
-                  Video Pool
-                </span>
-                <span className="text-lg font-bold text-slate-800" data-testid="info-video-count">
-                  {videoPoolCount} <span className="text-xs font-medium text-slate-500">files</span>
-                </span>
-              </div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-pink-700">
+                Video Pool
+              </span>
+              <span className="ml-auto text-sm font-bold text-slate-800" data-testid="info-video-count">
+                {videoPoolCount} <span className="text-[10px] font-medium text-slate-500">files</span>
+              </span>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-700 text-white">
-                <Scissors className="h-4 w-4" />
+            <div className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-700 text-white">
+                <Scissors className="h-3 w-3" />
               </span>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-700">
-                  Auto Cut
-                </span>
-                <span className="text-lg font-bold text-slate-800" data-testid="info-autocut-count">
-                  {autoCutCount} <span className="text-xs font-medium text-slate-500">cards</span>
-                </span>
-              </div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-700">
+                Auto Cut
+              </span>
+              <span className="ml-auto text-sm font-bold text-slate-800" data-testid="info-autocut-count">
+                {autoCutCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
+              </span>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white">
-                <Crop className="h-4 w-4" />
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-2.5 py-1">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500 text-white">
+                <Crop className="h-3 w-3" />
               </span>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">
-                  Both Ends
-                </span>
-                <span className="text-lg font-bold text-slate-800" data-testid="info-bothends-count">
-                  {bothEndsCount} <span className="text-xs font-medium text-slate-500">cards</span>
-                </span>
-              </div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+                Both Ends
+              </span>
+              <span className="ml-auto text-sm font-bold text-slate-800" data-testid="info-bothends-count">
+                {bothEndsCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
+              </span>
             </div>
           </div>
         </div>
