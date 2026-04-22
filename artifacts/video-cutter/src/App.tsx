@@ -481,6 +481,12 @@ function VideoCutterApp() {
     }
   };
 
+  const clearAllCards = () => {
+    cardRefs.current = [];
+    setNumCards(0);
+    setCardStates([]);
+  };
+
   const handleAutoCut = () => {
     if (canRunAutoCut) void runByMode("extend");
   };
@@ -590,7 +596,17 @@ function VideoCutterApp() {
         </div>
 
         {/* Info card - pool & action summary */}
-        <div className="mb-6 rounded-2xl border-2 border-slate-200 bg-white px-3 py-2 shadow-sm">
+        <div className="relative mb-6 rounded-2xl border-2 border-slate-200 bg-white px-3 py-2 pr-10 shadow-sm">
+          <button
+            type="button"
+            onClick={clearAllCards}
+            disabled={numCards === 0}
+            data-testid="button-clear-all-cards"
+            title="Remove all cards below"
+            className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-rose-300 bg-rose-50 text-rose-600 shadow-sm transition hover:border-rose-500 hover:bg-rose-100 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
             <div className={`flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-2.5 py-1 transition-opacity ${audioPoolCount === 0 ? "opacity-20" : ""}`}>
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500 text-white">
