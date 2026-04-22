@@ -1045,6 +1045,8 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
             ? "border-amber-400 shadow-md shadow-amber-200/50 bg-amber-50/40"
             : videoTooLong
             ? "border-rose-500 shadow-md shadow-rose-200/50 bg-rose-50/40"
+            : (!!audioFile !== !!videoFile)
+            ? "border-rose-500 shadow-md shadow-rose-200/50 bg-rose-50/40"
             : highlight
             ? "border-cyan-500 shadow-md"
             : "border-slate-300"
