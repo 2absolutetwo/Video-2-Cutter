@@ -30,7 +30,7 @@ import {
   GripVertical,
   Upload,
   AlertTriangle,
-  FastForward,
+  Crop,
 } from "lucide-react";
 
 type PoolItem = {
@@ -132,7 +132,7 @@ type Stage = "idle" | "reading" | "cutting" | "done" | "error";
 type CardState = {
   canCut: boolean;
   isWorking: boolean;
-  mode?: "extend" | "speed" | null;
+  mode?: "extend" | "trim" | null;
 };
 
 export type CutterCardHandle = {
@@ -186,8 +186,6 @@ function VideoCutterApp() {
   const setProgressCb = (cb: ((p: number) => void) | null) => {
     progressCbRef.current = cb;
   };
-
-  const [unlimitedSpeed, setUnlimitedSpeed] = useState(false);
 
   const [pool, setPool] = useState<PoolItem[]>([]);
   const poolRef = useRef<PoolItem[]>([]);
@@ -328,13 +326,13 @@ function VideoCutterApp() {
   const anyCanExtend = cardStates.some(
     (c) => c.canCut && c.mode === "extend",
   );
-  const anyCanSpeed = cardStates.some(
-    (c) => c.canCut && c.mode === "speed",
+  const anyCanTrim = cardStates.some(
+    (c) => c.canCut && c.mode === "trim",
   );
   const canRunAutoCut = ffmpegReady && anyCanExtend && !anyWorking;
-  const canRunSpeedUp = ffmpegReady && anyCanSpeed && !anyWorking;
+  const canRunBothEnds = ffmpegReady && anyCanTrim && !anyWorking;
 
-  const runByMode = async (target: "extend" | "speed") => {
+  const runByMode = async (target: "extend" | "trim") => {
     setRunning(true);
     try {
       for (let i = 0; i < numCards; i++) {
@@ -351,8 +349,8 @@ function VideoCutterApp() {
   const handleAutoCut = () => {
     if (canRunAutoCut) void runByMode("extend");
   };
-  const handleSpeedUp = () => {
-    if (canRunSpeedUp) void runByMode("speed");
+  const handleBothEnds = () => {
+    if (canRunBothEnds) void runByMode("trim");
   };
 
   return (
@@ -365,19 +363,6 @@ function VideoCutterApp() {
             Video Clip Cutter
           </h1>
           <div className="flex items-center gap-3">
-            <label
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs text-slate-600 hover:bg-slate-50"
-              title="If on, video can be sped up beyond 1.2x to match audio length"
-            >
-              <input
-                type="checkbox"
-                checked={unlimitedSpeed}
-                onChange={(e) => setUnlimitedSpeed(e.target.checked)}
-                className="h-3 w-3 accent-indigo-600"
-                data-testid="checkbox-unlimited-speed"
-              />
-              <span className="font-semibold">No speed limit</span>
-            </label>
             {ffmpegLoading && (
               <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -412,14 +397,14 @@ function VideoCutterApp() {
               )}
             </button>
             <button
-              onClick={handleSpeedUp}
-              disabled={!canRunSpeedUp}
-              data-testid="button-speed-up"
+              onClick={handleBothEnds}
+              disabled={!canRunBothEnds}
+              data-testid="button-both-ends"
               className="rounded-full border-2 border-amber-400 bg-white px-5 py-1.5 text-sm font-semibold tracking-wider text-amber-700 transition hover:border-amber-600 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <span className="inline-flex items-center">
-                <FastForward className="mr-2 h-3.5 w-3.5" />
-                SPEED UP
+                <Crop className="mr-2 h-3.5 w-3.5" />
+                BOTH ENDS
               </span>
             </button>
           </div>
@@ -463,7 +448,6 @@ function VideoCutterApp() {
               setProgressCb={setProgressCb}
               onStateChange={setCardState(i)}
               highlight={cardStates[i]?.isWorking}
-              unlimitedSpeed={unlimitedSpeed}
             />
           ))}
           <button
@@ -704,13 +688,12 @@ type CutterCardProps = {
   engineReady: boolean;
   setProgressCb: (cb: ((p: number) => void) | null) => void;
   onStateChange: (s: CardState) => void;
-  unlimitedSpeed?: boolean;
   highlight?: boolean;
 };
 
 const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
   function CutterCard(
-    { index, ffmpeg, engineReady, setProgressCb, onStateChange, highlight, unlimitedSpeed = false },
+    { index, ffmpeg, engineReady, setProgressCb, onStateChange, highlight },
     ref,
   ) {
     const { toast } = useToast();
@@ -776,13 +759,16 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
       videoDuration !== null &&
       videoDuration > audioDuration;
 
-    const SPEED_LIMIT = 1.2;
-    const speedFactor =
-      videoTooLong && audioDuration && videoDuration
-        ? videoDuration / audioDuration
-        : 1;
-    const speedAllowed =
-      videoTooLong && (unlimitedSpeed || speedFactor <= SPEED_LIMIT);
+    const trimAmount =
+      videoTooLong && audioDuration !== null && videoDuration !== null
+        ? videoDuration - audioDuration
+        : 0;
+    const trimAllowed =
+      videoTooLong &&
+      audioDuration !== null &&
+      videoDuration !== null &&
+      audioDuration > 0 &&
+      trimAmount < videoDuration;
 
     const canCut =
       engineReady &&
@@ -793,13 +779,13 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
       audioDuration !== null &&
       !isWorking &&
       ((cutTime !== null && cutTime > 0 && cutTime < videoDuration) ||
-        speedAllowed);
+        trimAllowed);
 
-    const mode: "extend" | "speed" | null =
+    const mode: "extend" | "trim" | null =
       cutTime !== null && cutTime > 0 && videoDuration !== null && cutTime < videoDuration
         ? "extend"
-        : speedAllowed
-        ? "speed"
+        : trimAllowed
+        ? "trim"
         : null;
 
     useEffect(() => {
@@ -828,8 +814,8 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
       if (!ffmpeg || !audioFile || !videoFile || audioDuration === null || videoDuration === null) return;
 
       const isExtendCase = cutTime !== null && cutTime > 0 && cutTime < videoDuration;
-      const isSpeedCase = videoTooLong && (unlimitedSpeed || speedFactor <= SPEED_LIMIT);
-      if (!isExtendCase && !isSpeedCase) return;
+      const isTrimCase = trimAllowed;
+      if (!isExtendCase && !isTrimCase) return;
 
       setErrorMsg("");
       setProgress(0);
@@ -858,35 +844,35 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
         await ffmpeg.writeFile(inputName, data);
         const mimeType = outputExt === "webm" ? "video/webm" : "video/mp4";
 
-        if (isSpeedCase) {
-          // Case 2: Video > Audio — speed up video to match audio duration.
-          // Force output to .mp4 since re-encoding is required and webm/vp8
-          // encoder is not available in ffmpeg.wasm.
+        if (isTrimCase) {
+          // Case 2: Video > Audio — trim equally from both ends so total
+          // length equals audio. Stream copy keeps original quality & is fast.
           setStage("cutting");
-          const ratio = audioDuration / videoDuration; // < 1 (faster)
-          const speedMergedName = `Merged ${index}.mp4`;
-          const speedMergedFile = `${ns}${speedMergedName}`;
+          const totalCut = videoDuration - audioDuration; // > 0
+          const headCut = totalCut / 2;
           await ffmpeg.exec([
+            "-ss",
+            headCut.toFixed(3),
             "-i",
             inputName,
-            "-filter:v",
-            `setpts=${ratio.toFixed(6)}*PTS`,
+            "-t",
+            audioDuration.toFixed(3),
+            "-c",
+            "copy",
             "-an",
-            "-c:v",
-            "mpeg4",
-            "-q:v",
-            "5",
-            speedMergedFile,
+            "-avoid_negative_ts",
+            "make_zero",
+            mergedFile,
           ]);
 
-          const mergedData = await ffmpeg.readFile(speedMergedFile);
+          const mergedData = await ffmpeg.readFile(mergedFile);
           const mergedBuf = mergedData as Uint8Array;
           const mergedBlob = new Blob([mergedBuf.slice().buffer], {
-            type: "video/mp4",
+            type: mimeType,
           });
           const mUrl = URL.createObjectURL(mergedBlob);
           setMergedUrl(mUrl);
-          setMergedName(speedMergedName);
+          setMergedName(mergedFileName);
           setMergedSize(mergedBlob.size);
           setMergedDuration(audioDuration);
 
@@ -895,7 +881,7 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
 
           try {
             await ffmpeg.deleteFile(inputName);
-            await ffmpeg.deleteFile(speedMergedFile);
+            await ffmpeg.deleteFile(mergedFile);
           } catch {
             /* ignore */
           }
@@ -1002,10 +988,10 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
     return (
       <div
         className={`rounded-2xl border-2 bg-white p-4 shadow-sm transition-colors ${
-          videoTooLong && !speedAllowed
-            ? "border-rose-500 shadow-md shadow-rose-200/50 bg-rose-50/40"
-            : videoTooLong && speedAllowed
+          videoTooLong && trimAllowed
             ? "border-amber-400 shadow-md shadow-amber-200/50 bg-amber-50/40"
+            : videoTooLong
+            ? "border-rose-500 shadow-md shadow-rose-200/50 bg-rose-50/40"
             : highlight
             ? "border-cyan-500 shadow-md"
             : "border-slate-300"
@@ -1102,16 +1088,16 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
         {/* Status row */}
         {(isWorking || errorMsg || videoTooLong || (cutTime !== null && cutTime > 0) || mergedUrl) && (
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
-            {videoTooLong && !mergedUrl && speedAllowed && (
+            {videoTooLong && !mergedUrl && trimAllowed && (
               <span className="inline-flex items-center gap-1.5 rounded border border-amber-400 bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">
                 <AlertTriangle className="h-3 w-3" />
-                speed up {speedFactor.toFixed(2)}× (+{formatSeconds(Math.abs(cutTime ?? 0))})
+                trim ±{formatSeconds(trimAmount / 2)} both ends
               </span>
             )}
-            {videoTooLong && !mergedUrl && !speedAllowed && (
+            {videoTooLong && !mergedUrl && !trimAllowed && (
               <span className="inline-flex items-center gap-1.5 rounded border border-rose-400 bg-rose-100 px-2 py-0.5 font-semibold text-rose-700">
                 <AlertTriangle className="h-3 w-3" />
-                Video too long: needs {speedFactor.toFixed(2)}× speed (max 1.20×)
+                Video longer than audio (+{formatSeconds(Math.abs(cutTime ?? 0))})
               </span>
             )}
             {cutTime !== null && cutTime > 0 && !mergedUrl && (
