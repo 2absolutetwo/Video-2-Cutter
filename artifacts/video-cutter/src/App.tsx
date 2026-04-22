@@ -31,6 +31,9 @@ import {
   Upload,
   AlertTriangle,
   Crop,
+  Activity,
+  CheckCheck,
+  AlertCircle,
 } from "lucide-react";
 
 type PoolItem = {
@@ -133,6 +136,9 @@ type CardState = {
   canCut: boolean;
   isWorking: boolean;
   mode?: "extend" | "trim" | null;
+  hasAudio: boolean;
+  hasVideo: boolean;
+  isDone: boolean;
 };
 
 export type CutterCardHandle = {
@@ -240,6 +246,9 @@ function VideoCutterApp() {
     Array.from({ length: INITIAL_CARDS }, () => ({
       canCut: false,
       isWorking: false,
+      hasAudio: false,
+      hasVideo: false,
+      isDone: false,
     })),
   );
   const [running, setRunning] = useState(false);
@@ -252,7 +261,7 @@ function VideoCutterApp() {
     });
     setCardStates((prev) => [
       ...prev,
-      { canCut: false, isWorking: false },
+      { canCut: false, isWorking: false, hasAudio: false, hasVideo: false, isDone: false },
     ]);
   };
 
@@ -264,7 +273,7 @@ function VideoCutterApp() {
       if (prev.length >= count) return prev;
       const next = prev.slice();
       while (next.length < count) {
-        next.push({ canCut: false, isWorking: false });
+        next.push({ canCut: false, isWorking: false, hasAudio: false, hasVideo: false, isDone: false });
       }
       return next;
     });
@@ -367,7 +376,15 @@ function VideoCutterApp() {
   const setCardState = (idx: number) => (s: CardState) => {
     setCardStates((prev) => {
       const cur = prev[idx];
-      if (cur.canCut === s.canCut && cur.isWorking === s.isWorking) return prev;
+      if (
+        cur.canCut === s.canCut &&
+        cur.isWorking === s.isWorking &&
+        cur.hasAudio === s.hasAudio &&
+        cur.hasVideo === s.hasVideo &&
+        cur.isDone === s.isDone &&
+        cur.mode === s.mode
+      )
+        return prev;
       const next = prev.slice();
       next[idx] = s;
       return next;
@@ -389,6 +406,13 @@ function VideoCutterApp() {
   ).length;
   const bothEndsCount = cardStates.filter(
     (c) => c.canCut && c.mode === "trim",
+  ).length;
+  const activeCount = cardStates.filter(
+    (c) => c.hasAudio && c.hasVideo && !c.isDone,
+  ).length;
+  const completeCount = cardStates.filter((c) => c.isDone).length;
+  const errorCount = cardStates.filter(
+    (c) => c.hasAudio !== c.hasVideo,
   ).length;
   const canRunAutoCut = ffmpegReady && anyCanExtend && !anyWorking;
   const canRunBothEnds = ffmpegReady && anyCanTrim && !anyWorking;
@@ -516,6 +540,39 @@ function VideoCutterApp() {
               </span>
               <span className="ml-auto text-sm font-bold text-slate-800" data-testid="info-bothends-count">
                 {bothEndsCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50/60 px-2.5 py-1">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-500 text-white">
+                <Activity className="h-3 w-3" />
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-700">
+                Active
+              </span>
+              <span className="ml-auto text-sm font-bold text-slate-800" data-testid="info-active-count">
+                {activeCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50/60 px-2.5 py-1">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-green-600 text-white">
+                <CheckCheck className="h-3 w-3" />
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-green-700">
+                Complete
+              </span>
+              <span className="ml-auto text-sm font-bold text-slate-800" data-testid="info-complete-count">
+                {completeCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50/60 px-2.5 py-1">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-rose-500 text-white">
+                <AlertCircle className="h-3 w-3" />
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-700">
+                Error
+              </span>
+              <span className="ml-auto text-sm font-bold text-slate-800" data-testid="info-error-count">
+                {errorCount} <span className="text-[10px] font-medium text-slate-500">cards</span>
               </span>
             </div>
           </div>
@@ -899,9 +956,13 @@ const CutterCard = forwardRef<CutterCardHandle, CutterCardProps>(
         ? "trim"
         : null;
 
+    const hasAudio = !!audioFile;
+    const hasVideo = !!videoFile;
+    const isDone = stage === "done";
+
     useEffect(() => {
-      onStateChange({ canCut, isWorking, mode });
-    }, [canCut, isWorking, mode, onStateChange]);
+      onStateChange({ canCut, isWorking, mode, hasAudio, hasVideo, isDone });
+    }, [canCut, isWorking, mode, hasAudio, hasVideo, isDone, onStateChange]);
 
     const reset = () => {
       if (outputUrl) URL.revokeObjectURL(outputUrl);
